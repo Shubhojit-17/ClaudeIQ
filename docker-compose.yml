@@ -1,0 +1,29 @@
+# ============================================================
+# ClauseIQ — Docker Compose
+# PostgreSQL 15 with pgvector extension
+# ============================================================
+
+version: "3.9"
+
+services:
+  clauseiq-db:
+    image: pgvector/pgvector:pg15
+    container_name: clauseiq-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clauseiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clauseiq_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-clauseiq_db}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clauseiq} -d ${POSTGRES_DB:-clauseiq_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    driver: local

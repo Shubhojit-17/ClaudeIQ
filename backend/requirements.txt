@@ -1,0 +1,29 @@
+# ============================================================
+# ClauseIQ — Python Dependencies
+# ============================================================
+
+# ─── Core Framework ─────────────────────────────────────────
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+pydantic==2.*
+pydantic-settings==2.*
+
+# ─── Database ───────────────────────────────────────────────
+sqlalchemy==2.0.*
+psycopg2-binary==2.9.*
+
+# ─── Environment ────────────────────────────────────────────
+python-dotenv==1.0.*
+
+# ─── File Uploads ───────────────────────────────────────────
+python-multipart==0.0.*
+
+# ─── Future: AI & Ingestion (uncomment when ready) ──────────
+# openai>=1.0
+# langchain>=0.2
+# langchain-openai>=0.1
+# pymupdf>=1.24
+# pytesseract>=0.3
+# pgvector>=0.2
+# python-jose[cryptography]>=3.3
+# passlib[bcrypt]>=1.7
