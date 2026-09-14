@@ -18,6 +18,7 @@
 
 ## 📋 Table of Contents
 
+- [Master Project Documentation (Complete Guide & Viva Q&A)](docs/PROJECT_DOCUMENTATION.md)
 - [Problem Statement](#-problem-statement)
 - [Solution Overview](#-solution-overview)
 - [Tech Stack](#-tech-stack)
