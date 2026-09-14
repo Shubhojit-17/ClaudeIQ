@@ -154,6 +154,7 @@ from ingestion import process_document
 from ai_engine import ai_engine
 from models import Contract, ExtractedClause, KeyDate, RiskFlag, User
 from schemas import (
+    AuditLogResponse,
     ContractResponse,
     ContractSummary,
     HealthCheckResponse,
@@ -202,6 +203,13 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         )
 
     token = create_access_token({"sub": user.email, "role": user.role, "user_id": str(user.user_id)})
+    crud.create_audit_log(
+        db,
+        action="USER_LOGIN",
+        user_id=user.user_id,
+        user_email=user.email,
+        details="User authenticated via password credentials",
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -312,8 +320,16 @@ async def upload_contract(
                     status=kd["status"],
                 )
 
-        # 5. Update Status
+        # 5. Update Status & Audit Log
         crud.update_contract_status(db, contract.contract_id, "analyzed")
+        crud.create_audit_log(
+            db,
+            action="CONTRACT_UPLOADED",
+            user_id=current_user.user_id,
+            user_email=current_user.email,
+            target_contract_id=contract.contract_id,
+            details=f"Uploaded {file_name}: extracted {len(clauses)} clauses, detected {ai_analysis['summary']['total_risks']} risks",
+        )
         db.refresh(contract)
         return contract
 
@@ -355,6 +371,14 @@ async def delete_contract(
             detail="Contract not found or access denied.",
         )
     crud.delete_contract(db, contract_id)
+    crud.create_audit_log(
+        db,
+        action="CONTRACT_DELETED",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        target_contract_id=contract_id,
+        details=f"Contract {contract.file_name} deleted with cascading cleanup",
+    )
     return None
 
 
@@ -390,6 +414,14 @@ async def trigger_analysis(
             )
 
     crud.update_contract_status(db, contract.contract_id, "analyzed")
+    crud.create_audit_log(
+        db,
+        action="CONTRACT_ANALYZED",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        target_contract_id=contract_id,
+        details=f"Re-analyzed agreement: {ai_analysis['summary']['total_risks']} compliance flags identified",
+    )
     return {
         "status": "success",
         "contract_id": str(contract_id),
@@ -421,5 +453,25 @@ async def get_obligations(
 ):
     """Returns upcoming milestone dates and renewal alerts across all tracked contracts."""
     return crud.get_all_upcoming_dates(db, limit=limit)
+
+
+@app.get("/api/audit-logs", response_model=List[AuditLogResponse], tags=["Audit"])
+async def list_audit_logs(
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the compliance audit trail.
+    Available to admin and reviewer users for SOC 2 / compliance review.
+    """
+    if current_user.role not in ["admin", "reviewer"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Audit logs require compliance or administrator privileges.",
+        )
+    return crud.get_audit_logs(db, skip=skip, limit=limit)
+
 
 
