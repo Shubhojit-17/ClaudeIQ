@@ -23,14 +23,22 @@ DATABASE_URL = os.getenv(
 
 # ---------------------------------------------------------------------------
 # SQLAlchemy Engine
+# Supports both PostgreSQL and SQLite (useful for local development/testing)
 # ---------------------------------------------------------------------------
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,          # Set to True for SQL query logging during development
-    pool_size=10,        # Connection pool size
-    max_overflow=20,     # Max connections beyond pool_size
-    pool_pre_ping=True,  # Verify connections before use
-)
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,          # Set to True for SQL query logging during development
+        pool_size=10,        # Connection pool size
+        max_overflow=20,     # Max connections beyond pool_size
+        pool_pre_ping=True,  # Verify connections before use
+    )
 
 # ---------------------------------------------------------------------------
 # Session Factory
@@ -45,6 +53,30 @@ SessionLocal = sessionmaker(
 # Declarative Base for ORM Models
 # ---------------------------------------------------------------------------
 Base = declarative_base()
+
+
+def check_db_connection() -> dict:
+    """
+    Checks if the database is reachable and returns status info.
+    Used by the health check endpoint.
+    """
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        dialect = engine.dialect.name
+        return {
+            "connected": True,
+            "dialect": dialect,
+            "status": "online",
+        }
+    except Exception as exc:
+        return {
+            "connected": False,
+            "dialect": engine.dialect.name,
+            "status": "offline",
+            "error": str(exc),
+        }
 
 
 # ---------------------------------------------------------------------------

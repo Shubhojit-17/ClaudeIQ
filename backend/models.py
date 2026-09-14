@@ -16,6 +16,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     DateTime,
@@ -25,10 +26,43 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import TypeDecorator, CHAR
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
 from database import Base
+
+
+# ═══════════════════════════════════════════════════════════════
+# PLATFORM-INDEPENDENT GUID TYPE
+# ═══════════════════════════════════════════════════════════════
+class GUID(TypeDecorator):
+    """
+    Platform-independent GUID type.
+    Uses PostgreSQL native UUID if available, falls back to CHAR(36) on SQLite.
+    Ensures models run seamlessly in both production and local/test environments.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == "postgresql":
+            return str(value) if not isinstance(value, uuid.UUID) else value
+        return str(value) if isinstance(value, uuid.UUID) else str(uuid.UUID(str(value)))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if not isinstance(value, uuid.UUID):
+            return uuid.UUID(str(value))
+        return value
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -38,21 +72,24 @@ class User(Base):
     """
     Represents a system user.
     Roles: admin, reviewer, viewer — used for RBAC enforcement.
+    Includes password hash and active status for authentication foundation.
     """
 
     __tablename__ = "users"
 
     user_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False, default="")
     role = Column(
         Enum("admin", "reviewer", "viewer", name="user_role_enum"),
         nullable=False,
         default="viewer",
     )
     department = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # ── Relationships ────────────────────────────────────────
@@ -75,10 +112,10 @@ class Contract(Base):
     __tablename__ = "contracts"
 
     contract_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     uploaded_by = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.user_id", ondelete="SET NULL"),
         nullable=True,
     )
@@ -123,15 +160,15 @@ class ContractAccess(Base):
     __tablename__ = "contract_access"
 
     access_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     contract_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("contracts.contract_id", ondelete="CASCADE"),
         nullable=False,
     )
     user_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -162,10 +199,10 @@ class ExtractedClause(Base):
     __tablename__ = "extracted_clauses"
 
     clause_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     contract_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("contracts.contract_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -199,10 +236,10 @@ class RiskFlag(Base):
     __tablename__ = "risk_flags"
 
     flag_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     clause_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("extracted_clauses.clause_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -234,10 +271,10 @@ class KeyDate(Base):
     __tablename__ = "key_dates"
 
     date_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
     contract_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("contracts.contract_id", ondelete="CASCADE"),
         nullable=False,
     )
