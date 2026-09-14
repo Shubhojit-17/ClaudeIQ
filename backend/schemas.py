@@ -203,3 +203,19 @@ class ContractSummary(ContractBase):
     upcoming_dates_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUDIT LOG SCHEMAS (Phase 4 Track 1)
+# ═══════════════════════════════════════════════════════════════
+class AuditLogResponse(BaseModel):
+    log_id: UUID
+    user_id: Optional[UUID] = None
+    user_email: Optional[str] = None
+    action: str
+    target_contract_id: Optional[UUID] = None
+    details: Optional[str] = None
+    timestamp: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

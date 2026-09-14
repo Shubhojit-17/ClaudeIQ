@@ -22,6 +22,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -300,3 +301,34 @@ class KeyDate(Base):
 
     def __repr__(self):
         return f"<KeyDate {self.event_type} on {self.event_date} ({self.status})>"
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMPLIANCE AUDIT LOG (Phase 4 Track 1)
+# ═══════════════════════════════════════════════════════════════
+class AuditLog(Base):
+    """
+    Enterprise Compliance Audit Log.
+    Maintains an immutable legal audit trail of all contract operations:
+    upload, analysis, access grant, deletion, and auth events.
+    Essential for SOC 2 Type II and Deloitte enterprise audit readiness.
+    """
+
+    __tablename__ = "audit_logs"
+
+    log_id = Column(
+        GUID(), primary_key=True, default=uuid.uuid4
+    )
+    user_id = Column(
+        GUID(),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    user_email = Column(String(255), nullable=True)
+    action = Column(String(128), nullable=False, index=True)
+    target_contract_id = Column(GUID(), nullable=True, index=True)
+    details = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def __repr__(self):
+        return f"<AuditLog {self.action} by {self.user_email} at {self.timestamp}>"

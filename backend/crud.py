@@ -14,7 +14,7 @@ from datetime import datetime, date
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
-from models import Contract, ContractAccess, ExtractedClause, KeyDate, RiskFlag, User
+from models import AuditLog, Contract, ContractAccess, ExtractedClause, KeyDate, RiskFlag, User
 from schemas import ContractCreate, UserCreate
 
 
@@ -223,3 +223,41 @@ def get_all_upcoming_dates(db: Session, limit: int = 20) -> List[KeyDate]:
         .limit(limit)
         .all()
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUDIT LOGS CRUD (Phase 4 Track 1)
+# ═══════════════════════════════════════════════════════════════
+
+def create_audit_log(
+    db: Session,
+    action: str,
+    user_id: Optional[uuid.UUID] = None,
+    user_email: Optional[str] = None,
+    target_contract_id: Optional[uuid.UUID] = None,
+    details: Optional[str] = None,
+) -> AuditLog:
+    entry = AuditLog(
+        log_id=uuid.uuid4(),
+        user_id=user_id,
+        user_email=user_email,
+        action=action,
+        target_contract_id=target_contract_id,
+        details=details,
+        timestamp=datetime.utcnow(),
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+def get_audit_logs(db: Session, skip: int = 0, limit: int = 50) -> List[AuditLog]:
+    return (
+        db.query(AuditLog)
+        .order_by(AuditLog.timestamp.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
