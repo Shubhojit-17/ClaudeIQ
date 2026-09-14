@@ -56,6 +56,17 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, description="Raw password to be hashed")
 
 
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: "UserResponse"
+
+
 class UserResponse(UserBase):
     user_id: UUID
     is_active: bool
