@@ -114,4 +114,13 @@ export const fetchObligations = async () => {
   }
 };
 
+export const fetchAuditLogs = async () => {
+  try {
+    const response = await apiClient.get("/api/audit-logs");
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return { ok: false, data: null, error: error.message };
+  }
+};
+
 export default apiClient;
