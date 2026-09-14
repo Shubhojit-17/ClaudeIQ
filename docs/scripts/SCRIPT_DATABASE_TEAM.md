@@ -1,75 +1,64 @@
 SCRIPT - Database & Infrastructure Team (Your Script)
 
 Speaker: You (Team Lead / Infra & DB Owner)
-Duration: 4-5 minutes
+Duration: ~5 minutes
 Tone: Confident, structured, project-lead perspective
 
 ---
 
-OPENING - Project Introduction & Problem Context
+OPENING - Project Introduction & Business Problem
 
-Good [morning/afternoon]. Thank you for taking the time to meet with us today. I'll start with a quick overview of our project, and then our backend and frontend teammates will walk you through their specific areas.
+Good [morning/afternoon]. Thank you for joining us today for our progress review. I will open with an overview of our project and how we have structured our architecture, and then our backend and frontend engineers will dive into their tracks.
 
-Our project is ClauseIQ - an AI-powered contract intelligence and compliance assistant. The business problem we are solving is severe: enterprise contract review is overwhelmingly manual, taking legal teams between 4 to 6 hours for a single agreement. Missing auto-renewal deadlines or accepting non-standard liability clauses costs organizations approximately 9% of their annual revenue, and teams lack a centralized dashboard to track obligations.
+Our project is ClauseIQ - an AI-powered contract intelligence and compliance assistant developed for enterprise legal and procurement operations. 
 
-ClauseIQ solves this by ingesting PDF and Word contracts, extracting text via OCR, segmenting documents into logical clauses, and analyzing them with an LLM paired with Retrieval-Augmented Generation (RAG). A foundational requirement of our system is Citation Grounding: every risk flagged by the AI must cite the verbatim source text from the contract. This eliminates hallucinations and provides complete auditability.
+The core pain point we are addressing is critical: enterprise contract review is overwhelmingly manual and slow, taking between 4 to 6 hours for a single agreement. Missing auto-renewal deadlines or failing to spot non-standard liability clauses costs companies approximately 9% of their annual revenue, while procurement and compliance teams have zero centralized visibility across their portfolio obligations.
 
-
-PHASE 1 - Architecture & Design Decisions
-
-In Phase 1, we finalized our four-layer architecture:
-1. Interface Layer: A responsive React 18 dashboard styled with Tailwind CSS.
-2. API Layer: FastAPI handling REST endpoints, auth, and validation.
-3. Processing and Intelligence Layer: Document ingestion via PyMuPDF/OCR and RAG screening via LLM.
-4. Data Layer: PostgreSQL 15 with the pgvector extension for unified relational and vector storage.
-
-A critical architectural decision we made was using pgvector inside PostgreSQL rather than a separate vector database like Pinecone or Milvus. This keeps our relational data, role permissions, and vector embeddings in a single ACID-compliant database, drastically reducing infrastructure operational complexity and eliminating sync failures.
+ClauseIQ solves this by ingesting PDF and Word contracts, extracting text through OCR, segmenting the text into logical legal clauses, and running them through an AI compliance screener. Most importantly, we have implemented strict Citation Grounding: every risk flagged by the AI must cite the exact verbatim text from the contract clause. This eliminates AI hallucinations and gives legal counsel complete auditability.
 
 
-PHASE 2 - Infrastructure, Schema & Foundation Implementation
+PHASE 1 & 2 - Foundations & Database Schema
 
-In Phase 2, we completed the full database and infrastructure foundation:
+In Phases 1 and 2, we finalized our four-layer architecture (Interface, API, Processing/Intelligence, and Data Layer) and deployed the core PostgreSQL and schema foundations:
+1. Dockerized PostgreSQL 15 with the pgvector extension on port 5432 with persistent volumes and health checks.
+2. We designed 6 core relational tables using SQLAlchemy ORM:
+   - users: With RBAC roles (admin, reviewer, viewer) and secure password hashes.
+   - contracts: Storing S3 document paths and pipeline status (uploaded, processing, analyzed, error).
+   - contract_access: Implementing Row-Level Security (RLS) to ensure users only query agreements they have explicit authorization to view.
+   - extracted_clauses: Storing segmented clauses with indices, ready for 1536-dimensional vector embeddings.
+   - risk_flags: Recording compliance risks with a dedicated source_citation column that stores the exact contract text quoted.
+   - key_dates: Extracting renewal, expiry, and review deadlines with status tracking.
+3. Platform-Independent GUID Handling: We built a custom GUID TypeDecorator in models.py that automatically uses native PostgreSQL UUIDs in production while mapping transparently to CHAR(36) in SQLite during local and unit testing.
+4. Database Seeding & Schema Verification: We wrote seed.py to populate demo users, contracts, clauses, and citations, and verify_db.py to validate table creation, cascading deletes, and queries with 100% test success.
 
-First, Docker and Environment Setup:
-We configured docker-compose.yml to launch PostgreSQL 15 with pgvector on port 5432, with automated health checks and persistent volume storage. We also created a comprehensive .env.example template and configured git ignore rules across all stacks.
 
-Second, SQLAlchemy ORM Schema Design (6 Core Tables):
-1. users: Stores system users with RBAC roles (admin, reviewer, viewer), hashed passwords for secure authentication, and active status flags.
-2. contracts: Tracks uploaded contracts with S3 storage paths, timestamps, and pipeline processing status (uploaded, processing, analyzed, error).
-3. contract_access: Implements Row-Level Security (RLS). Contracts are queried through this access control table so reviewers and viewers only see documents they have explicit permissions to view.
-4. extracted_clauses: Holds individual clauses chunked from contracts, ordered by clause_index, and prepared for 1536-dimensional vector embeddings.
-5. risk_flags: Records AI-detected compliance risks. Critically, this table includes a dedicated source_citation column that stores the exact excerpt from the contract clause that triggered the flag.
-6. key_dates: Extracts critical milestones (renewals, expiries, terminations, reviews) with status tracking (upcoming, overdue, completed).
+PHASE 3 - Authentication & Row-Level Security CRUD Operations
 
-All primary keys use UUIDs to prevent enumeration attacks and support distributed ID generation. We configured cascading delete constraints so deleting a contract cleanly removes its clauses, risk flags, and key dates.
+In Phase 3, my team completed the core security and data access layer:
 
-Third, Platform-Independent GUID Type:
-To ensure our code can run in both production PostgreSQL and isolated test environments, I engineered a custom GUID TypeDecorator in models.py. When connected to PostgreSQL, it uses native postgresql.UUID; when running unit tests or local development against SQLite, it transparently handles 36-character strings. This means our test suite runs anywhere without external dependencies.
+First, Authentication & Password Hashing in auth.py:
+We implemented cryptographic password hashing using PBKDF2-HMAC-SHA256 with 100,000 iterations and unique random salts, along with legacy support for seeded test accounts. We built JWT token generation and verification routines using PyJWT, issuing 24-hour access tokens that encode the user's ID, email, and role. We created the get_current_user dependency for FastAPI, which extracts and validates the bearer token on incoming requests.
 
-Fourth, Pydantic v2 Schema Layer:
-In schemas.py, we created complete Pydantic models for request validation and response serialization across all six entities, plus health check probes and system capability metadata.
+Second, Row-Level Security CRUD Queries in crud.py:
+We engineered database queries that strictly enforce multi-tenant Row-Level Security:
+- When an admin queries contracts, they see the full enterprise portfolio.
+- When a reviewer or viewer queries contracts, crud.get_contracts_for_user joins the contracts table with contract_access, filtering exclusively by the authenticated user's ID. A user in procurement never sees unauthorized executive agreements.
+- We also built transactional functions for bulk clause creation, grounded risk flag persistence with mandatory source_citation validation, and cascading contract deletion.
 
-Fifth, Database Seeding & Verification:
-We created seed.py which populates 3 test users across distinct roles, 2 realistic contracts (a Cloud Services Agreement and a Mutual NDA), 3 extracted clauses, grounded risk flags citing exact contract text, and 4 milestone dates.
-We also built verify_db.py, which runs automated schema verification, testing table creation, CRUD operations, relationships, and cascading deletes. It passed with 100% success.
+All database and security work has been committed to our GitHub repository.
 
-All database work has been committed to our GitHub repository under feat(database).
-
-Now I'll pass it over to our backend team to discuss the API layer.
+Now I will pass the floor to our backend team to explain our document ingestion and AI intelligence pipeline.
 
 
 ---
 
-KEY TALKING POINTS & QUESTIONS YOU MIGHT BE ASKED
+TECHNICAL QUESTIONS YOU MIGHT BE ASKED
 
-How do you prevent AI hallucinations?
-Explain our Grounded AI architecture: The risk_flags table contains a dedicated source_citation column. In our prompt pipeline, the LLM is constrained to only flag risks if it can quote the verbatim excerpt from the extracted clause text. Our backend validates that the citation exists in the original clause before writing to the database. No citation means no risk flag.
+Question: How do you enforce multi-tenant isolation and data privacy?
+Answer: Through our contract_access table and JWT dependency. Every contract query inspects the authenticated user ID from the verified JWT token and applies an inner or outer join against contract_access. If a user does not have an explicit access grant or is not the document uploader, the database query returns empty, guaranteeing that unauthorized users cannot view sensitive agreements.
 
-Why pgvector instead of a standalone vector database?
-A standalone vector DB requires running two separate database clusters, writing two-phase commits to keep them in sync, and reconciling permissions separately. With pgvector in PostgreSQL, vector similarity queries can be joined directly with our contract_access Row-Level Security table in a single SQL query.
+Question: Why did you choose PBKDF2-HMAC-SHA256?
+Answer: PBKDF2 with 100,000 iterations of SHA-256 and salt is a NIST-approved standard that provides high resistance to rainbow-table and GPU brute-force attacks while being completely reliable across Windows and Linux environments without external C-compiler dependencies.
 
-What is your Row-Level Security strategy?
-We use the contract_access table to map user IDs to contract IDs with permissions (read, write, admin). Every API query that lists or fetches contracts joins against contract_access using the authenticated user's ID, ensuring multi-tenant data isolation.
-
-Phase 3 Preview (Wrap-up):
-In Phase 3, we will implement the document ingestion pipeline with PyMuPDF and OCR, wire up the AI analysis engine with RAG screening, and implement JWT authentication routes.
+Question: What is next for the database track in Phase 4?
+Answer: In Phase 4, we will focus on query optimization, index tuning on clause vector lookups, and audit logging for legal compliance trails.

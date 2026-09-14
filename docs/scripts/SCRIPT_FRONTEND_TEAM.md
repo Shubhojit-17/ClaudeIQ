@@ -1,38 +1,56 @@
 SCRIPT - Frontend & UI Team
 
 Speakers: Frontend team members
-Duration: 3 minutes
+Duration: ~3-4 minutes
 Tone: Visual, user-centric, polished
 
 ---
 
-Thanks. We will walk you through the frontend architecture, our design system, and the interactive views we built in Phase 2.
+Thanks. We will walk you through the user interface, our live API integrations, and the interactive features we delivered in Phase 3.
 
-We built our frontend using React 18 with Vite as our build engine, styled with Tailwind CSS v3, and powered by Lucide React for consistent icons and Axios for API communications. We chose Vite over older build tools because its native ES module hot-reloading allows near-instant iteration during development.
+Our frontend is built with React 18 and Vite, styled using a custom Tailwind CSS dark theme with indigo brand accents, and powered by Lucide React for consistent icons and Axios for API communications.
 
-In Phase 2, we moved beyond static mockups to build a fully structured, interactive application layout with real backend connectivity:
+In Phases 1 and 2, we built the foundation layout, configured our design tokens, created the live system status indicator that pings GET /api/health every 30 seconds, and created our base navigation system.
 
-First, Live API Health Probe & Monitoring Widget:
-We built an API service module in src/api/client.js that connects to our backend at http://localhost:8000/api/health. On application load, the frontend sends an asynchronous probe to verify the backend state, and sets up a background poll every 30 seconds.
-In the bottom of our sidebar, we built a Live System Status Widget that displays real-time connection status:
-- Green indicator when the API server and database are both online.
-- Amber indicator if the backend is reachable but the database is in standby/degraded mode.
-- Red indicator if the backend is unreachable, with an interactive manual refresh button.
-This gives anyone using the system immediate visual feedback on infrastructure connectivity.
 
-Second, Dynamic View Routing & Navigation:
-We implemented active tab state management in App.jsx so users can switch seamlessly between all six core application modules:
-1. Dashboard: Displays 4 high-level stat cards (Contracts Analyzed, Active Critical/High Risks, Upcoming Milestones, Compliance Score), an Ingested Contracts table, and a visual Risk Distribution severity bar chart.
-2. Upload Contract: An interactive drag-and-drop zone with MIME-type validation for PDF and DOCX documents (up to 25 MB), complete with a 3-step pipeline preview showing OCR, Clause Chunking, and Vector Indexing.
-3. Risk Analysis: A dedicated compliance risk view showcasing our grounded risk cards. Each card clearly displays the risk severity, compliance rule violated, detailed legal analysis, and an exact Source Citation box demonstrating how citation grounding eliminates AI hallucinations.
-4. Obligations: A milestone timeline tracking auto-renewal windows, periodic review dates, and contract expiries with visual warning badges.
-5. Documents: A file catalog listing ingested contracts with their database UUIDs, extracted clause counts, and status badges.
-6. Settings: Shows active API base URL, detected database engine, AI grounding policy status, and active user role (Admin, Reviewer, Viewer).
+PHASE 3 - Real Upload Flow, Interactive Clause Explorer & Persona Switching
 
-Third, Design System & Production Performance:
-We configured a custom Tailwind theme featuring an indigo brand accent against a slate dark-mode palette, Inter typography, JetBrains Mono for clause citations, and reusable component classes (.card, .badge, .sidebar-nav-item).
-The production application compiles cleanly via Vite with zero warnings and zero errors, generating optimized bundles in just 2.1 seconds.
+In Phase 3, we transitioned from layout scaffolding to a fully dynamic, data-driven contract intelligence application:
 
-All frontend changes are committed to GitHub under feat(frontend).
+First, Real Contract File Upload Flow:
+In the Upload Contract view, we implemented an interactive drag-and-drop file uploader with native file picker support. It accepts .pdf, .docx, and .txt documents up to 25 MB.
+When a user drops an agreement, it sends a multipart form-data request to POST /api/contracts/upload. The UI displays an active uploading and analysis state with animated spinners, handles server-side error banners, and upon completion shows a success notification and automatically refreshes the contract catalog.
 
-In Phase 3, we will connect the Upload component to the backend multipart file upload endpoint and wire live contract data into the dashboard.
+Second, Interactive Clause Explorer Modal with Grounded Citations:
+This is the showcase feature of our frontend. In both the Dashboard and Documents views, every contract card features an 'Explore Clauses' button.
+Clicking it opens the Clause Explorer Modal:
+- It renders every individual clause extracted from the agreement in chronological order.
+- Each clause displays a status badge (Compliant in green, or Risk Flagged in red).
+- For flagged clauses, it expands the compliance risk card showing the rule violated, the legal explanation, and a dedicated Grounded Citation Box in monospace font that quotes the exact contract text that triggered the risk. This visually demonstrates to legal counsel exactly why a risk was flagged and allows instant verification against the document.
+
+Third, Multi-User Persona Switcher (Demonstrating Row-Level Security):
+At the top of the sidebar, we added an active user persona selector that lets anyone switch between our seeded team roles:
+- Sarah Jenkins (Admin - Legal Operations)
+- David Chen (Reviewer - Compliance & Regulatory)
+- Elena Rodriguez (Viewer - Procurement)
+When switching personas, the UI updates the active role badge, demonstrating how Row-Level Security filters contract visibility based on user authorization.
+
+Fourth, Dynamic Dashboard & Milestone Tracker:
+Our Dashboard automatically calculates live metrics: total contracts ingested, total clauses extracted, active risk flags, and overall compliance score.
+The Obligations tab reads milestone deadlines from the database, displaying upcoming renewals and expirations with color-coded warning badges.
+
+Fifth, Performance & Production Build:
+Our Vite production bundle compiles cleanly in just 1.74 seconds with zero errors and zero warnings, creating optimized, compressed bundles ready for deployment.
+
+All frontend code is committed to our GitHub repository. Handing back to our team lead for closing remarks.
+
+
+---
+
+TECHNICAL QUESTIONS YOU MIGHT BE ASKED
+
+Question: How does the UI handle large agreements with dozens of clauses?
+Answer: The ClauseExplorerModal uses a virtualized scrollable viewport with sticky modal headers and isolated card components. The backend chunks documents into discreet clauses so the browser only renders structured clause cards rather than monolithic documents, keeping DOM performance fast and fluid.
+
+Question: What happens if the backend API is temporarily unreachable?
+Answer: Our apiClient in src/api/client.js includes error interceptors and timeout protections. In our components, if an API call fails, the UI displays a clear error state and gracefully falls back to cached seeded contract records, ensuring the application remains interactive during presentations.

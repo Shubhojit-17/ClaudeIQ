@@ -1,53 +1,62 @@
 SCRIPT - Backend & AI Team
 
 Speakers: Backend team members
-Duration: 3-4 minutes
+Duration: ~4 minutes
 Tone: Technical, structured, authoritative
 
 ---
 
-Thanks. I will walk through the API architecture, our backend foundation, and how we have prepared for the AI intelligence pipeline.
+Thanks. I will walk you through the document ingestion pipeline, our grounded AI analysis engine, and the RESTful API routes we developed in Phase 3.
 
-In Phase 1, we designed the backend around FastAPI. We selected FastAPI because it is native asynchronous Python, delivers near-C performance, generates interactive OpenAPI documentation automatically, and uses Pydantic v2 for strict type validation. This validation is critical for our system because we handle unstructured document uploads and complex structured JSON outputs from LLMs.
+In Phases 1 and 2, our focus was establishing the core FastAPI server foundation:
+- Configuring CORS middleware for our Vite frontend dev server at port 5173.
+- Implementing the live database connectivity health probe in GET /api/health which executes a live SELECT 1 query and reports healthy or degraded states.
+- Developing the GET /api/system/info endpoint that reveals platform capabilities, supported formats (.pdf, .docx), and active compliance checklists.
+- Establishing centralized exception handling to intercept unhandled errors and format clean JSON error payloads.
 
-In Phase 2, we completed the core API server foundation in main.py:
 
-First, Live Database Connectivity Health Probe:
-Many starter templates have a health check that just returns a static string. In our system, the GET /api/health endpoint executes a real database connectivity probe using check_db_connection() in database.py. It executes a test query (SELECT 1), measures connectivity, detects the active SQL dialect, and returns:
-- Status 'healthy' when the database is actively connected.
-- Status 'degraded' when the API server is up but the database is currently offline or reconnecting.
-This gives both the frontend and automated monitoring tools real-time visibility into infrastructure health.
+PHASE 3 - Ingestion Pipeline, Grounded AI Engine & REST APIs
 
-Second, System Capability Metadata Endpoint:
-We added a GET /api/system/info endpoint that returns platform metadata, supported file types (.pdf and .docx), and active compliance checklists (such as GDPR cross-border transfer rules, auto-renewal traps, and uncapped liability limits). This allows the frontend to dynamically discover system capabilities.
+In Phase 3, we built and verified the core processing and intelligence workflows:
 
-Third, Centralized Exception Handling & CORS:
-We configured CORS middleware to allow cross-origin requests from our Vite frontend dev server at localhost port 5173. We also implemented a global exception handler that intercepts unhandled server exceptions and returns structured JSON error responses containing the HTTP status code, error type, request path, and UTC timestamp, preventing uncaught tracebacks from leaking to clients.
+First, Document Ingestion in ingestion.py:
+We implemented the DocumentExtractor class supporting native PDF extraction via PyPDF2/PyMuPDF and Microsoft Word DOCX parsing via python-docx.
+Once raw text is extracted, our ClauseChunker uses regex pattern matching against section headers, Roman numerals, and numbered clauses to chunk agreements into distinct, ordered legal sections. It normalizes whitespace and discards noise, ensuring every clause retains its logical context.
 
-Fourth, Automated API Test Suite:
-We created an automated test suite in test_api.py using FastAPI TestClient and HTTPX. The suite tests:
-1. The health check endpoint with database probe validation.
-2. The system info endpoint and compliance rules metadata.
-3. CORS headers on preflight OPTIONS requests.
-4. Graceful 404 handling for undefined routes.
-All tests run and pass with 100% success.
+Second, Grounded AI Analysis Engine in ai_engine.py:
+Our AI engine is engineered around one non-negotiable principle: Zero Hallucination via Citation Grounding.
+Every AI finding must cite the exact source text from the agreement. We built:
+1. LegalRuleScanner: An intelligent compliance screener detecting high-risk contract clauses:
+   - Automatic Renewal Traps (detects renewal notice windows requiring > 30 days notice).
+   - GDPR / Cross-Border Data Transfer (detects unapproved international personal data processing).
+   - Uncapped Liability / Consequential Damages (detects clauses that omit bilateral liability caps).
+   - Unilateral Indemnification and punitive termination fees.
+2. CitationGrounder: For every flagged risk, it extracts and verifies that the candidate citation is a verbatim excerpt of the original contract clause text. If a citation cannot be grounded in the text, it is discarded.
+3. Milestone Date Extractor: Scans clauses for term lengths and notice deadlines, extracting renewal and expiration dates for the obligation tracker.
+4. Dual-Mode Architecture: When an OPENAI_API_KEY is present in the environment, the engine orchestrates OpenAI GPT-4o with structured Pydantic schemas. When operating offline or in local demo environments, it automatically falls back to our deterministic rule scanner, ensuring the system is always 100% functional.
 
-Fifth, Preparation for AI & Ingestion Modules:
-We architected the interfaces for the two core Phase 3 modules:
-- ingestion.py: Outlines the document extraction flow using PyMuPDF for digital PDFs, Tesseract OCR for scanned agreements, and semantic clause chunking to preserve legal section hierarchy.
-- ai_engine.py: Outlines our four-stage AI pipeline: EmbeddingService (1536-dim vectors), RAGRetriever (vector similarity lookup), RiskScreener (LLM compliance analysis), and CitationGrounder (validates that every risk flag quotes the exact source text).
+Third, Full REST API Endpoints in main.py:
+We implemented and tested the full suite of Phase 3 endpoints:
+- POST /api/auth/register and POST /api/auth/login: Issues JWT bearer tokens verifying user roles.
+- GET /api/contracts: Lists contracts with summaries (clause counts, risk counts, and upcoming dates) filtered by Row-Level Security.
+- POST /api/contracts/upload: Accepts multipart PDF or Word files, triggers the ingestion pipeline, chunks clauses, executes grounded AI risk screening, and persists clauses, flags, and dates in a single transactional request.
+- GET /api/contracts/{id}: Returns full contract details, clauses, and risk flags.
+- POST /api/analyze/{id}: Re-screens existing clauses against updated compliance policies.
+- GET /api/contracts/{id}/risks: Fetches all grounded risk flags with source citations.
+- GET /api/obligations: Returns upcoming milestones across all accessible contracts.
 
-All backend changes are committed to GitHub under feat(backend).
+Fourth, Automated Verification:
+We created test_phase3.py which tests the entire lifecycle: registration, JWT login, contract upload, 4-clause semantic splitting, grounded risk detection, citation verification, and cascading deletion. All tests passed with 100% success.
 
-That concludes our backend update - handing over to the frontend team.
+All backend and AI code is committed to GitHub. Handing over to our frontend team.
 
 
 ---
 
 TECHNICAL QUESTIONS YOU MIGHT BE ASKED
 
-How does your health check handle a database outage?
-Instead of throwing an unhandled 500 error, check_db_connection catches connection exceptions safely and reports connected=false with dialect info. The health endpoint returns HTTP 200 with status='degraded' and database status='offline', allowing downstream services to gracefully handle reconnection.
+Question: How do you mathematically guarantee that your AI does not hallucinate?
+Answer: We enforce grounding at both the software and data layer. In ai_engine.py, CitationGrounder.validate_and_ground runs an exact substring match between the candidate citation and the cleaned clause text. If the citation is not present in the contract, it is rejected. In models.py, the risk_flags table requires a source_citation column. If an LLM returns a hallucinated rule without an exact quotation, the backend will not persist the flag.
 
-How do you validate structured AI outputs from the LLM?
-We will use Pydantic schemas (defined in schemas.py) such as RiskFlagCreate. When the LLM outputs JSON, Pydantic validates that all required fields are present, that risk_level matches our enum (critical, high, medium, low), and that the source_citation is non-empty. If validation fails, our CitationGrounder rejects the output and triggers a retry.
+Question: What happens if an uploaded PDF is scanned rather than native text?
+Answer: DocumentExtractor attempts digital text extraction first. In our production architecture, if extracted text length is below a minimum threshold, it initiates an optical character recognition (OCR) fallback pipeline using Tesseract before handing the document over to the clause chunker.
