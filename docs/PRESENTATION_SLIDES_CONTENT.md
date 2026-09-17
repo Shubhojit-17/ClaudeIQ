@@ -4,10 +4,19 @@
 ---
 
 ### Slide 1: Title Slide (Cover)
-- **Title**: **ClauseIQ**
+**`[PES University | DarkTrace | ClauseIQ | Final Deck]`**
+
+- **Project Name**: **ClauseIQ**
 - **Subtitle**: Autonomous Legal Intelligence, Grounded Contract Analysis & Enterprise Compliance Platform
-- **Presenter / Team**: Enterprise AI & Legal Engineering Team
-- **Date / Local Time**: September 2026
+- **Campus**: PES University
+- **Team Name**: DarkTrace
+- **Team Members**:
+  1. **Shubhojit Sarkar** (`shubhojitsarkar50@gmail.com`)
+  2. **Shaik Khadeeja Sayeed** (`shaikhkhadeeja9@gmail.com`)
+  3. **Shreeya Nagaraj** (`shreeya17n@gmail.com`)
+  4. **Sindhu S B** (`sindhusb2004@gmail.com`)
+  5. **Yalavarthi Gnana Deepika** (`gnanadeepika12@gmail.com`)
+- **Date**: September 2026
 - **Tagline**: *"Eliminating Legal Hallucinations with 100% Verbatim Citation Grounding & Autonomous Intelligence."*
 
 ---
@@ -222,6 +231,14 @@
 ### Slide 16: Conclusion & Question / Answer
 - **Recap**: ClauseIQ transforms enterprise contracts from static, high-risk PDFs into living, queryable, and verifiable intelligence assets.
 - **Open Floor for Questions**: Demonstrating live system or deep-diving into specific architectural modules.
-- **Contact & Repository**:
-  - GitHub: `https://github.com/Shubhojit-17/ClaudeIQ`
-  - Documentation: Included in `/docs`
+- **Project Identity**:
+  - **Campus**: PES University
+  - **Team**: DarkTrace
+  - **Team Members**:
+    - Shubhojit Sarkar (`shubhojitsarkar50@gmail.com`)
+    - Shaik Khadeeja Sayeed (`shaikhkhadeeja9@gmail.com`)
+    - Shreeya Nagaraj (`shreeya17n@gmail.com`)
+    - Sindhu S B (`sindhusb2004@gmail.com`)
+    - Yalavarthi Gnana Deepika (`gnanadeepika12@gmail.com`)
+  - **GitHub Repository**: [github.com/Shubhojit-17/ClaudeIQ](https://github.com/Shubhojit-17/ClaudeIQ)
+  - **Platform Documentation**: `/docs` directory
