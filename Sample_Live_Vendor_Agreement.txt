@@ -1,0 +1,16 @@
+MASTER SERVICES AGREEMENT
+
+SECTION 1. DEFINITIONS AND SCOPE
+This Agreement governs the provision of software development and IT consulting services by TechCorp Solutions ("Supplier") to Enterprise Corp ("Customer").
+
+SECTION 2. TERM AND TERMINATION
+This Agreement commences on September 17, 2026. This Agreement shall automatically renew for successive twelve (12) month periods unless either party provides written notice of non-renewal at least ninety (90) days prior to the expiration of the then-current term.
+
+SECTION 3. INTELLECTUAL PROPERTY RIGHTS
+Supplier shall retain all intellectual property and proprietary rights in and to any deliverables created under this Agreement. Customer receives only a non-exclusive license.
+
+SECTION 4. LIMITATION OF LIABILITY
+In no event shall Supplier's liability be limited in any manner for claims resulting in unlimited consequential damages or lost profits. Supplier disclaims all warranties.
+
+SECTION 5. GOVERNING LAW
+This Agreement shall be construed in accordance with the laws of the State of New York.
