@@ -24,6 +24,11 @@ import {
   Lock,
   History,
   Filter,
+  Sparkles,
+  Key,
+  Cpu,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   checkHealth,
@@ -31,10 +36,13 @@ import {
   fetchContractDetail,
   uploadContractFile,
   deleteContractApi,
+  clearAllContractsApi,
   fetchObligations,
   fetchAuditLogs,
   loginUser,
   fetchRisks,
+  fetchAIStatus,
+  saveAIConfig,
 } from "./api/client";
 import "./App.css";
 
@@ -167,6 +175,18 @@ export default function App() {
       await loadDataForUser(currentUser);
     }
   };
+
+  const handleClearAllContracts = async () => {
+    if (
+      confirm(
+        "Are you sure you want to clear ALL contracts? This will permanently wipe all agreements, extracted clauses, risk flags, and milestone obligations to start from a 100% clean slate."
+      )
+    ) {
+      await clearAllContractsApi();
+      await loadDataForUser(currentUser);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen bg-surface-900 text-surface-50 font-sans">
@@ -325,6 +345,8 @@ export default function App() {
               contracts={contracts}
               allRisks={allRisks}
               onViewClauses={handleViewClauses}
+              onDelete={handleDeleteContract}
+              onClearAll={handleClearAllContracts}
               onNavigateUpload={() => setActiveTab("upload")}
             />
           )}
@@ -354,6 +376,7 @@ export default function App() {
               contracts={contracts}
               onViewClauses={handleViewClauses}
               onDelete={handleDeleteContract}
+              onClearAll={handleClearAllContracts}
               onNavigateUpload={() => setActiveTab("upload")}
             />
           )}
@@ -381,7 +404,7 @@ export default function App() {
    VIEW COMPONENTS
    ════════════════════════════════════════════════════════════ */
 
-function DashboardView({ contracts, allRisks, onViewClauses, onNavigateUpload }) {
+function DashboardView({ contracts, allRisks, onViewClauses, onDelete, onClearAll, onNavigateUpload }) {
   const totalRisks = contracts.reduce((acc, c) => acc + (c.risk_count || 0), 0);
   const totalClauses = contracts.reduce((acc, c) => acc + (c.clause_count || 0), 0);
   const cleanContracts = contracts.filter((c) => (c.risk_count || 0) === 0).length;
@@ -437,12 +460,24 @@ function DashboardView({ contracts, allRisks, onViewClauses, onNavigateUpload })
               <h3 className="text-sm font-semibold text-white">Ingested Contracts Catalog</h3>
               <p className="text-xs text-surface-200">Protected by Row-Level Security (RLS)</p>
             </div>
-            <button
-              onClick={onNavigateUpload}
-              className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors"
-            >
-              + Upload New
-            </button>
+            <div className="flex items-center gap-2">
+              {contracts.length > 0 && (
+                <button
+                  onClick={onClearAll}
+                  className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                  title="Wipe all contracts to start fresh with live uploads"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={onNavigateUpload}
+                className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                + Upload New
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -496,12 +531,23 @@ function DashboardView({ contracts, allRisks, onViewClauses, onNavigateUpload })
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <button
-                          onClick={() => onViewClauses(c.contract_id)}
-                          className="text-xs text-brand-400 hover:text-brand-300 font-medium hover:underline"
-                        >
-                          Explore Clauses
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => onViewClauses(c.contract_id)}
+                            className="text-xs text-brand-400 hover:text-brand-300 font-medium hover:underline"
+                          >
+                            Explore Clauses
+                          </button>
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(c.contract_id)}
+                              className="p-1 text-surface-300 hover:text-red-400 transition-colors rounded hover:bg-surface-800"
+                              title="Delete contract"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -860,7 +906,7 @@ function ObligationsView({ obligations, onNavigateUpload }) {
   );
 }
 
-function DocumentsView({ contracts, onViewClauses, onDelete, onNavigateUpload }) {
+function DocumentsView({ contracts, onViewClauses, onDelete, onClearAll, onNavigateUpload }) {
   return (
     <div className="card space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -868,7 +914,19 @@ function DocumentsView({ contracts, onViewClauses, onDelete, onNavigateUpload })
           <h3 className="text-sm font-bold text-white">Contract Documents Repository</h3>
           <p className="text-xs text-surface-200">Row-Level Security filtered view</p>
         </div>
-        <span className="text-xs text-surface-200">{contracts.length} agreement{contracts.length !== 1 ? "s" : ""} on record</span>
+        <div className="flex items-center gap-3">
+          {contracts.length > 0 && onClearAll && (
+            <button
+              onClick={onClearAll}
+              className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+              title="Clear all contracts"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear All
+            </button>
+          )}
+          <span className="text-xs text-surface-200">{contracts.length} agreement{contracts.length !== 1 ? "s" : ""} on record</span>
+        </div>
       </div>
 
       {contracts.length === 0 ? (
@@ -1078,8 +1136,228 @@ function AuditTrailView({ currentUser }) {
 }
 
 function SettingsView({ healthStatus, currentUser }) {
+  const [aiStatus, setAiStatus] = useState(null);
+  const [provider, setProvider] = useState("groq");
+  const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState("llama-3.3-70b-versatile");
+  const [baseUrl, setBaseUrl] = useState("https://api.groq.com/openai/v1");
+  const [loading, setLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
+
+  const loadStatus = async () => {
+    const res = await fetchAIStatus();
+    if (res.ok && res.data) {
+      setAiStatus(res.data);
+      if (res.data.provider) setProvider(res.data.provider);
+      if (res.data.model) setModel(res.data.model);
+      if (res.data.base_url) setBaseUrl(res.data.base_url);
+    }
+  };
+
+  const handleProviderSelect = (p) => {
+    setProvider(p);
+    if (p === "groq") {
+      setModel("llama-3.3-70b-versatile");
+      setBaseUrl("https://api.groq.com/openai/v1");
+    } else if (p === "gemini") {
+      setModel("gemini-2.0-flash");
+      setBaseUrl("https://generativelanguage.googleapis.com/v1beta/openai/");
+    } else if (p === "openai") {
+      setModel("gpt-4o-mini");
+      setBaseUrl("https://api.openai.com/v1");
+    } else {
+      setModel("");
+      setBaseUrl("");
+    }
+  };
+
+  const handleSaveConfig = async (e) => {
+    e.preventDefault();
+    if (!apiKey.trim() && !aiStatus?.api_key_configured) {
+      setSaveMessage({ type: "error", text: "Please provide an API key to enable live cloud LLM screening." });
+      return;
+    }
+    setLoading(true);
+    setSaveMessage(null);
+    const res = await saveAIConfig({
+      provider,
+      api_key: apiKey.trim() || undefined,
+      model: model.trim() || undefined,
+      base_url: baseUrl.trim() || undefined,
+    });
+    setLoading(false);
+    if (res.ok) {
+      setSaveMessage({
+        type: "success",
+        text: `AI Engine updated! Live LLM status: ${res.data?.live_llm_ready ? "ONLINE & READY" : "RULE-BASED (Awaiting Key)"}`,
+      });
+      await loadStatus();
+      setApiKey("");
+    } else {
+      setSaveMessage({ type: "error", text: res.error || "Failed to update AI settings" });
+    }
+  };
+
   return (
-    <div className="max-w-2xl space-y-6 animate-fade-in">
+    <div className="max-w-3xl space-y-6 animate-fade-in">
+      {/* Live AI Engine Configuration Card */}
+      <div className="card space-y-5 border-brand-500/30 bg-gradient-to-b from-surface-900 to-surface-950">
+        <div className="flex items-center justify-between pb-3 border-b border-surface-700">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Live Cloud AI Engine Configuration
+                {aiStatus?.live_llm_ready ? (
+                  <span className="badge bg-green-500/20 text-green-300 font-mono text-[10px]">
+                    ● LIVE LLM ACTIVE
+                  </span>
+                ) : (
+                  <span className="badge bg-amber-500/20 text-amber-300 font-mono text-[10px]">
+                    VERBATIM RULE ENGINE
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-surface-200">
+                Direct Cloud LLM inference with zero-hallucination verbatim citation verification.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Free API Key Suggestions */}
+        <div className="p-3 bg-surface-800/60 rounded-lg border border-surface-700 text-xs space-y-2">
+          <p className="text-white font-medium flex items-center gap-1.5">
+            <Key className="w-3.5 h-3.5 text-brand-400" /> Recommended Free & Fast LLM API Keys:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <a
+              href="https://console.groq.com/keys"
+              target="_blank"
+              rel="noreferrer"
+              className="p-2 rounded bg-surface-900 hover:bg-surface-750 border border-surface-700 text-surface-200 hover:text-white flex items-center justify-between transition-colors"
+            >
+              <div>
+                <span className="font-semibold text-brand-300">Groq Cloud (Free)</span>
+                <p className="text-[11px] text-surface-300">Llama 3.3 70B • ~500 tokens/sec</p>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-surface-400" />
+            </a>
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="p-2 rounded bg-surface-900 hover:bg-surface-750 border border-surface-700 text-surface-200 hover:text-white flex items-center justify-between transition-colors"
+            >
+              <div>
+                <span className="font-semibold text-blue-300">Google AI Studio (Free)</span>
+                <p className="text-[11px] text-surface-300">Gemini 2.0 Flash • High Speed</p>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-surface-400" />
+            </a>
+          </div>
+        </div>
+
+        {/* Configuration Form */}
+        <form onSubmit={handleSaveConfig} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-surface-200 font-medium mb-1.5">AI Provider</label>
+              <select
+                value={provider}
+                onChange={(e) => handleProviderSelect(e.target.value)}
+                className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs focus:border-brand-500 focus:outline-none"
+              >
+                <option value="groq">Groq Cloud (Free & Ultra Fast)</option>
+                <option value="gemini">Google Gemini (Free Tier via OpenAI endpoint)</option>
+                <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                <option value="custom">Custom OpenAI-Compatible Endpoint</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-surface-200 font-medium mb-1.5">Model Identifier</label>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. llama-3.3-70b-versatile, gemini-2.0-flash, gpt-4o-mini"
+                className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="text-xs">
+            <label className="block text-surface-200 font-medium mb-1.5">
+              API Key {aiStatus?.api_key_configured && <span className="text-green-400">(Key Currently Set)</span>}
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={aiStatus?.api_key_configured ? "Enter new key to change, or leave blank to keep" : "Paste your API key here (e.g. gsk_... or AIza...)"}
+                className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs font-mono pr-10 focus:border-brand-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2.5 top-2 text-surface-400 hover:text-white"
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="text-xs">
+            <label className="block text-surface-200 font-medium mb-1.5">API Base URL (Optional)</label>
+            <input
+              type="text"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://api.groq.com/openai/v1"
+              className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+
+          {saveMessage && (
+            <div
+              className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                saveMessage.type === "success"
+                  ? "bg-green-500/15 border border-green-500/30 text-green-300"
+                  : "bg-red-500/15 border border-red-500/30 text-red-300"
+              }`}
+            >
+              {saveMessage.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+              <span>{saveMessage.text}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-[11px] text-surface-300">
+              Active Provider: <strong className="text-white capitalize">{aiStatus?.provider || provider}</strong> • Model:{" "}
+              <strong className="text-white">{aiStatus?.model || model}</strong>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
+            >
+              {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              Save & Test AI Engine
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Architecture & RBAC Card */}
       <div className="card space-y-4">
         <h3 className="text-sm font-bold text-white">System Architecture & Capabilities</h3>
         <div className="space-y-3 text-xs">

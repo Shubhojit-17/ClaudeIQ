@@ -157,41 +157,264 @@ class LegalRuleScanner:
 
 
 class AIEngine:
-    """Unified AI Engine orchestrating LLM or deterministic scanner."""
+    """
+    Unified AI Intelligence Engine orchestrating live Cloud LLMs
+    (OpenAI, Groq, Google Gemini, OpenRouter) or deterministic legal scanner.
+    """
+
+    PROVIDERS = {
+        "openai": {
+            "name": "OpenAI",
+            "default_model": "gpt-4o-mini",
+            "base_url": None,
+        },
+        "groq": {
+            "name": "Groq Cloud (Fast & Free Tier)",
+            "default_model": "llama-3.3-70b-versatile",
+            "base_url": "https://api.groq.com/openai/v1",
+        },
+        "gemini": {
+            "name": "Google Gemini (Generous Free Tier)",
+            "default_model": "gemini-2.0-flash",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        },
+        "custom": {
+            "name": "Custom OpenAI-Compatible Endpoint",
+            "default_model": "gpt-4o",
+            "base_url": None,
+        },
+    }
 
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        self.use_openai = bool(self.api_key and self.api_key.startswith("sk-"))
+        self.provider = "none"
+        self.api_key = ""
+        self.model_name = ""
+        self.base_url = None
+        self._client = None
+        self._init_from_env()
+
+    def _init_from_env(self):
+        # Auto-detect from environment
+        openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+        groq_key = os.getenv("GROQ_API_KEY", "").strip()
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        custom_key = os.getenv("AI_API_KEY", "").strip()
+
+        if openai_key and not openai_key.startswith("sk-your"):
+            self.provider = "openai"
+            self.api_key = openai_key
+            self.model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
+            self.base_url = None
+        elif groq_key and not groq_key.startswith("gsk_your"):
+            self.provider = "groq"
+            self.api_key = groq_key
+            self.model_name = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+            self.base_url = "https://api.groq.com/openai/v1"
+        elif gemini_key and not gemini_key.startswith("your-gemini"):
+            self.provider = "gemini"
+            self.api_key = gemini_key
+            self.model_name = os.getenv("LLM_MODEL", "gemini-2.0-flash")
+            self.base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        elif custom_key:
+            self.provider = "custom"
+            self.api_key = custom_key
+            self.model_name = os.getenv("AI_MODEL", "gpt-4o")
+            self.base_url = os.getenv("AI_BASE_URL", None)
+
+    def is_configured(self) -> bool:
+        return bool(self.api_key and self.provider != "none")
+
+    def get_status(self) -> Dict[str, Any]:
+        return {
+            "configured": self.is_configured(),
+            "provider": self.provider,
+            "provider_name": self.PROVIDERS.get(self.provider, {}).get("name", "Deterministic Heuristic Engine"),
+            "model": self.model_name or "LegalRuleScanner (Local)",
+            "supported_providers": [
+                {
+                    "id": "openai",
+                    "name": "OpenAI (GPT-4o, GPT-4o-mini)",
+                    "website": "https://platform.openai.com/api-keys",
+                    "default_model": "gpt-4o-mini",
+                },
+                {
+                    "id": "groq",
+                    "name": "Groq Cloud (Llama 3.3 70B - Free Tier)",
+                    "website": "https://console.groq.com/keys",
+                    "default_model": "llama-3.3-70b-versatile",
+                },
+                {
+                    "id": "gemini",
+                    "name": "Google Gemini (Gemini 2.0 Flash - Free Tier)",
+                    "website": "https://aistudio.google.com/app/apikey",
+                    "default_model": "gemini-2.0-flash",
+                },
+                {
+                    "id": "custom",
+                    "name": "Custom OpenAI-Compatible (OpenRouter / Ollama / Local)",
+                    "website": "https://openrouter.ai/keys",
+                    "default_model": "gpt-4o",
+                },
+            ],
+        }
+
+    def configure(
+        self,
+        provider: str,
+        api_key: str,
+        model: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> tuple[bool, str]:
+        """Configures and tests live connectivity with the chosen AI provider."""
+        provider = provider.lower().strip()
+        if provider not in self.PROVIDERS:
+            return False, f"Unsupported provider: {provider}. Supported: {list(self.PROVIDERS.keys())}"
+
+        if not api_key or not api_key.strip():
+            # Reset to local scanner
+            self.provider = "none"
+            self.api_key = ""
+            self.model_name = ""
+            self.base_url = None
+            self._client = None
+            return True, "Reset to local deterministic legal scanner."
+
+        clean_key = api_key.strip()
+        chosen_base_url = base_url or self.PROVIDERS[provider]["base_url"]
+        chosen_model = model or self.PROVIDERS[provider]["default_model"]
+
+        try:
+            from openai import OpenAI
+            client_kwargs = {"api_key": clean_key}
+            if chosen_base_url:
+                client_kwargs["base_url"] = chosen_base_url
+
+            test_client = OpenAI(**client_kwargs)
+
+            # Test connection with a quick ping
+            test_resp = test_client.chat.completions.create(
+                model=chosen_model,
+                messages=[{"role": "user", "content": "Respond only with the word 'OK'."}],
+                max_tokens=5,
+            )
+            _ = test_resp.choices[0].message.content
+
+            # Connection verified! Save config
+            self.provider = provider
+            self.api_key = clean_key
+            self.model_name = chosen_model
+            self.base_url = chosen_base_url
+            self._client = test_client
+
+            return True, f"Successfully connected to {self.PROVIDERS[provider]['name']} using model {chosen_model}!"
+
+        except Exception as exc:
+            return False, f"Failed to connect to {provider}: {str(exc)}"
+
+    def _get_client(self):
+        if self._client:
+            return self._client
+        if not self.is_configured():
+            return None
+        from openai import OpenAI
+        client_kwargs = {"api_key": self.api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self._client = OpenAI(**client_kwargs)
+        return self._client
+
+    def analyze_clause_with_llm(self, clause_text: str) -> Optional[Dict[str, Any]]:
+        """Invokes the live LLM with strict grounding instructions."""
+        client = self._get_client()
+        if not client:
+            return None
+
+        system_prompt = (
+            "You are ClauseIQ, an enterprise legal contract compliance analyst.\n"
+            "Analyze the given contract clause for compliance risks, liability pitfalls, and key milestone dates.\n\n"
+            "CRITICAL INSTRUCTION — ZERO HALLUCINATIONS:\n"
+            "Every risk flag MUST provide a 'source_citation' that is a VERBATIM quote taken directly from the clause text.\n"
+            "Do NOT summarize, paraphrase, or invent quotes.\n\n"
+            "Return valid JSON strictly conforming to:\n"
+            "{\n"
+            '  "risk_flags": [\n'
+            '    {\n'
+            '      "risk_level": "critical" | "high" | "medium" | "low",\n'
+            '      "compliance_rule": "short category or rule name",\n'
+            '      "explanation": "clear legal reasoning for the risk",\n'
+            '      "source_citation": "exact verbatim text from the clause"\n'
+            '    }\n'
+            '  ],\n'
+            '  "key_dates": [\n'
+            '    {\n'
+            '      "event_type": "expiry" | "renewal" | "termination" | "review",\n'
+            '      "event_date": "YYYY-MM-DD",\n'
+            '      "status": "upcoming"\n'
+            '    }\n'
+            '  ]\n'
+            "}"
+        )
+
+        try:
+            kwargs = {
+                "model": self.model_name,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Clause Text:\n\"\"\"\n{clause_text}\n\"\"\""},
+                ],
+                "temperature": 0.1,
+            }
+            if "gpt-4" in self.model_name or "llama" in self.model_name:
+                kwargs["response_format"] = {"type": "json_object"}
+
+            resp = client.chat.completions.create(**kwargs)
+            raw = resp.choices[0].message.content.strip()
+
+            # Clean markdown codeblocks if present
+            if raw.startswith("```"):
+                raw = re.sub(r"^```(?:json)?\n?", "", raw)
+                raw = re.sub(r"\n?```$", "", raw)
+
+            data = json.loads(raw)
+
+            # Ground each citation against source text
+            grounded_flags = []
+            for r in data.get("risk_flags", []):
+                cit = r.get("source_citation", "")
+                grounded = CitationGrounder.validate_and_ground(clause_text, cit)
+                if grounded:
+                    r["source_citation"] = grounded
+                    grounded_flags.append(r)
+                elif cit and cit.lower() in clause_text.lower():
+                    grounded_flags.append(r)
+
+            return {
+                "risk_flags": grounded_flags,
+                "key_dates": data.get("key_dates", []),
+            }
+
+        except Exception as exc:
+            print(f"[WARN] Live LLM execution exception: {exc}. Falling back to deterministic scanner.")
+            return None
 
     def analyze_clauses(self, clauses: List[str]) -> Dict[str, Any]:
-        """
-        Analyzes an array of extracted clause texts.
-        Returns:
-            {
-                "clause_results": [
-                    {
-                        "clause_index": int,
-                        "text": str,
-                        "risk_flags": [ {...}, ... ],
-                        "key_dates": [ {...}, ... ]
-                    }
-                ],
-                "summary": {
-                    "total_clauses": int,
-                    "total_risks": int,
-                    "critical_count": int,
-                    "high_count": int
-                }
-            }
-        """
+        """Analyzes all extracted clauses with live LLM (if configured) or deterministic scanner."""
         clause_results = []
         total_risks = 0
         critical_count = 0
         high_count = 0
 
         for idx, text in enumerate(clauses, start=1):
-            risks = LegalRuleScanner.analyze_clause(text)
-            dates = LegalRuleScanner.extract_dates(text)
+            llm_result = None
+            if self.is_configured():
+                llm_result = self.analyze_clause_with_llm(text)
+
+            if llm_result and (llm_result.get("risk_flags") or llm_result.get("key_dates")):
+                risks = llm_result.get("risk_flags", [])
+                dates = llm_result.get("key_dates", [])
+            else:
+                risks = LegalRuleScanner.analyze_clause(text)
+                dates = LegalRuleScanner.extract_dates(text)
 
             for r in risks:
                 total_risks += 1

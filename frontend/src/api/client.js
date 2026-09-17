@@ -123,6 +123,37 @@ export const fetchAuditLogs = async () => {
   }
 };
 
+export const clearAllContractsApi = async () => {
+  try {
+    const response = await apiClient.post("/api/contracts/clear-all");
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return { ok: false, data: null, error: error.message };
+  }
+};
+
+export const fetchAIStatus = async () => {
+  try {
+    const response = await apiClient.get("/api/settings/ai-status");
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return { ok: false, data: null, error: error.message };
+  }
+};
+
+export const saveAIConfig = async (config) => {
+  try {
+    const response = await apiClient.post("/api/settings/ai-config", config);
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      error: error.response?.data?.detail || error.message || "Failed to update AI configuration",
+    };
+  }
+};
+
 export const fetchRisks = async () => {
   try {
     const response = await apiClient.get("/api/risks");
@@ -133,3 +164,4 @@ export const fetchRisks = async () => {
 };
 
 export default apiClient;
+

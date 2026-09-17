@@ -142,6 +142,16 @@ def delete_contract(db: Session, contract_id: uuid.UUID) -> bool:
     return False
 
 
+def clear_all_contracts(db: Session) -> int:
+    """Deletes all contracts with cascading cleanup to reset database state."""
+    contracts = db.query(Contract).all()
+    count = len(contracts)
+    for c in contracts:
+        db.delete(c)
+    db.commit()
+    return count
+
+
 # ═══════════════════════════════════════════════════════════════
 # CLAUSES & GROUNDED RISK FLAGS CRUD
 # ═══════════════════════════════════════════════════════════════

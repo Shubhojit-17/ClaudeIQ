@@ -222,3 +222,13 @@ class AuditLogResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+# ═══════════════════════════════════════════════════════════════
+# AI CONFIGURATION SCHEMAS
+# ═══════════════════════════════════════════════════════════════
+class AISettingsRequest(BaseModel):
+    provider: str
+    api_key: str
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+

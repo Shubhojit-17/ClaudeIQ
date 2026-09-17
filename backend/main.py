@@ -154,6 +154,7 @@ from ingestion import process_document
 from ai_engine import ai_engine
 from models import Contract, ExtractedClause, KeyDate, RiskFlag, User
 from schemas import (
+    AISettingsRequest,
     AuditLogResponse,
     ContractResponse,
     ContractSummary,
@@ -382,6 +383,27 @@ async def delete_contract(
     return None
 
 
+@app.post("/api/contracts/clear-all", tags=["Contracts"])
+async def clear_all_contracts_endpoint(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Clears all contracts, extracted clauses, key dates, and risk flags.
+    Provides a 1-click clean slate reset so only live uploaded files exist.
+    """
+    count = crud.clear_all_contracts(db)
+    crud.create_audit_log(
+        db,
+        action="ALL_CONTRACTS_CLEARED",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        details=f"Clean slate reset executed by {current_user.email}: deleted {count} contracts.",
+    )
+    return {"status": "success", "deleted_count": count, "message": "All contracts wiped successfully."}
+
+
+
 @app.post("/api/analyze/{contract_id}", tags=["Analysis"])
 async def trigger_analysis(
     contract_id: uuid.UUID,
@@ -481,6 +503,44 @@ async def list_audit_logs(
             detail="Audit logs require compliance or administrator privileges.",
         )
     return crud.get_audit_logs(db, skip=skip, limit=limit)
+
+
+# ═══════════════════════════════════════════════════════════════
+# AI ENGINE SETTINGS ROUTES
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/settings/ai-status", tags=["Settings"])
+async def get_ai_status(
+    current_user: User = Depends(get_current_user),
+):
+    """Returns the current status, provider, and active model of the live AI Engine."""
+    return ai_engine.get_status()
+
+
+@app.post("/api/settings/ai-config", tags=["Settings"])
+async def configure_ai_engine(
+    config: AISettingsRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Configures the live AI Engine with provider, API key, model, and optional base URL.
+    """
+    res = ai_engine.configure(
+        provider=config.provider,
+        api_key=config.api_key,
+        model=config.model,
+        base_url=config.base_url,
+    )
+    crud.create_audit_log(
+        db,
+        action="AI_SETTINGS_UPDATED",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        details=f"AI provider configured to '{config.provider}' with model '{res.get('model')}'",
+    )
+    return res
+
 
 
 
