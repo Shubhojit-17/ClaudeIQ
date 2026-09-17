@@ -38,6 +38,7 @@ client = TestClient(app)
 def run_phase4_integration():
     print("[INFO] [Track 2 - Backend & Integration] Starting Phase 4 End-to-End tests...")
 
+    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     db = TestingSessionLocal()
 

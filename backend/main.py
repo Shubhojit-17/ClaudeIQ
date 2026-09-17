@@ -445,6 +445,15 @@ async def get_contract_risks(
     return crud.get_risks_for_contract(db, contract_id)
 
 
+@app.get("/api/risks", response_model=List[RiskFlagResponse], tags=["Analysis"])
+async def get_all_accessible_risks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns all grounded risk flags across contracts accessible to current user."""
+    return crud.get_all_risks_for_user(db, current_user)
+
+
 @app.get("/api/obligations", response_model=List[KeyDateResponse], tags=["Obligations"])
 async def get_obligations(
     limit: int = 20,
@@ -452,7 +461,7 @@ async def get_obligations(
     db: Session = Depends(get_db),
 ):
     """Returns upcoming milestone dates and renewal alerts across all tracked contracts."""
-    return crud.get_all_upcoming_dates(db, limit=limit)
+    return crud.get_all_upcoming_dates(db, user=current_user, limit=limit)
 
 
 @app.get("/api/audit-logs", response_model=List[AuditLogResponse], tags=["Audit"])

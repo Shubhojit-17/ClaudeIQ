@@ -216,13 +216,61 @@ def create_key_date(
     return kd
 
 
-def get_all_upcoming_dates(db: Session, limit: int = 20) -> List[KeyDate]:
-    return (
-        db.query(KeyDate)
+def get_all_upcoming_dates(db: Session, user: User, limit: int = 20) -> List[dict]:
+    contracts = get_contracts_for_user(db, user)
+    contract_ids = [c.contract_id for c in contracts]
+    if not contract_ids:
+        return []
+
+    rows = (
+        db.query(KeyDate, Contract.file_name)
+        .join(Contract, KeyDate.contract_id == Contract.contract_id)
+        .filter(KeyDate.contract_id.in_(contract_ids))
         .order_by(KeyDate.event_date.asc())
         .limit(limit)
         .all()
     )
+
+    results = []
+    for kd, file_name in rows:
+        results.append({
+            "date_id": kd.date_id,
+            "contract_id": kd.contract_id,
+            "event_type": kd.event_type,
+            "event_date": kd.event_date,
+            "status": kd.status,
+            "file_name": file_name,
+        })
+    return results
+
+
+def get_all_risks_for_user(db: Session, user: User) -> List[dict]:
+    contracts = get_contracts_for_user(db, user)
+    contract_ids = [c.contract_id for c in contracts]
+    if not contract_ids:
+        return []
+
+    rows = (
+        db.query(RiskFlag, Contract.file_name, Contract.contract_id)
+        .join(ExtractedClause, RiskFlag.clause_id == ExtractedClause.clause_id)
+        .join(Contract, ExtractedClause.contract_id == Contract.contract_id)
+        .filter(Contract.contract_id.in_(contract_ids))
+        .all()
+    )
+
+    results = []
+    for flag, file_name, contract_id in rows:
+        results.append({
+            "flag_id": flag.flag_id,
+            "clause_id": flag.clause_id,
+            "risk_level": flag.risk_level,
+            "compliance_rule": flag.compliance_rule,
+            "explanation": flag.explanation,
+            "source_citation": flag.source_citation,
+            "file_name": file_name,
+            "contract_id": contract_id,
+        })
+    return results
 
 
 # ═══════════════════════════════════════════════════════════════

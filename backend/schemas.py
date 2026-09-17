@@ -119,6 +119,8 @@ class RiskFlagCreate(RiskFlagBase):
 class RiskFlagResponse(RiskFlagBase):
     flag_id: UUID
     clause_id: UUID
+    file_name: Optional[str] = None
+    contract_id: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -163,6 +165,7 @@ class KeyDateCreate(KeyDateBase):
 class KeyDateResponse(KeyDateBase):
     date_id: UUID
     contract_id: UUID
+    file_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

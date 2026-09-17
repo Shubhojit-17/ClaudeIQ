@@ -123,4 +123,13 @@ export const fetchAuditLogs = async () => {
   }
 };
 
+export const fetchRisks = async () => {
+  try {
+    const response = await apiClient.get("/api/risks");
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return { ok: false, data: null, error: error.message };
+  }
+};
+
 export default apiClient;

@@ -34,12 +34,13 @@ import {
   fetchObligations,
   fetchAuditLogs,
   loginUser,
+  fetchRisks,
 } from "./api/client";
 import "./App.css";
 
 /* ════════════════════════════════════════════════════════════
    ClauseIQ — Main Application Layout & Feature Views
-   Phase 4 Core Integration & Polish
+   Phase 4 Core Integration & Polish (Live Data Mode)
    ════════════════════════════════════════════════════════════ */
 
 const NAV_ITEMS = [
@@ -53,9 +54,9 @@ const NAV_ITEMS = [
 ];
 
 const DEMO_USERS = [
-  { name: "Sarah Jenkins", email: "admin@clauseiq.com", role: "admin", dept: "Legal Operations" },
-  { name: "David Chen", email: "reviewer@clauseiq.com", role: "reviewer", dept: "Compliance & Regulatory" },
-  { name: "Elena Rodriguez", email: "viewer@clauseiq.com", role: "viewer", dept: "Procurement" },
+  { name: "Sarah Jenkins", email: "admin@clauseiq.com", password: "AdminSecure2027!", role: "admin", dept: "Legal Operations" },
+  { name: "David Chen", email: "reviewer@clauseiq.com", password: "ReviewerPass2027!", role: "reviewer", dept: "Compliance & Regulatory" },
+  { name: "Elena Rodriguez", email: "viewer@clauseiq.com", password: "ViewerRead2027!", role: "viewer", dept: "Procurement" },
 ];
 
 export default function App() {
@@ -72,6 +73,7 @@ export default function App() {
 
   const [contracts, setContracts] = useState([]);
   const [obligations, setObligations] = useState([]);
+  const [allRisks, setAllRisks] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
@@ -102,46 +104,47 @@ export default function App() {
     }
   };
 
-  // Load contracts & obligations
-  const loadData = async () => {
+  // Load live contracts, obligations & risks for the active authenticated user
+  const loadDataForUser = async (userToAuth = currentUser) => {
     setLoadingContracts(true);
+    // 1. Authenticate with live backend
+    await loginUser(userToAuth.email, userToAuth.password);
+
+    // 2. Fetch live contracts
     const cResult = await fetchContracts();
-    if (cResult.ok && Array.isArray(cResult.data) && cResult.data.length > 0) {
+    if (cResult.ok && Array.isArray(cResult.data)) {
       setContracts(cResult.data);
     } else {
-      // Fallback to seeded demo state if API is not yet running
-      setContracts([
-        {
-          contract_id: "c1001-4b2a-88ff-9812",
-          file_name: "Acme_Cloud_Services_Agreement_2026.pdf",
-          status: "analyzed",
-          clause_count: 3,
-          risk_count: 2,
-          upcoming_dates_count: 2,
-          created_at: new Date().toISOString(),
-        },
-        {
-          contract_id: "c2002-9a1f-33bc-1144",
-          file_name: "Apex_Mutual_NDA_v2.docx",
-          status: "analyzed",
-          clause_count: 2,
-          risk_count: 0,
-          upcoming_dates_count: 2,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      setContracts([]);
     }
 
+    // 3. Fetch live obligations
     const oResult = await fetchObligations();
     if (oResult.ok && Array.isArray(oResult.data)) {
       setObligations(oResult.data);
+    } else {
+      setObligations([]);
     }
+
+    // 4. Fetch live risks
+    const rResult = await fetchRisks();
+    if (rResult.ok && Array.isArray(rResult.data)) {
+      setAllRisks(rResult.data);
+    } else {
+      setAllRisks([]);
+    }
+
     setLoadingContracts(false);
+  };
+
+  const handleSwitchPersona = async (user) => {
+    setCurrentUser(user);
+    await loadDataForUser(user);
   };
 
   useEffect(() => {
     pollHealth();
-    loadData();
+    loadDataForUser(currentUser);
     const interval = setInterval(pollHealth, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -153,62 +156,7 @@ export default function App() {
     if (res.ok && res.data) {
       setSelectedContract(res.data);
     } else {
-      // Fallback demo detail for modal
-      setSelectedContract({
-        contract_id: contractId,
-        file_name: "Acme_Cloud_Services_Agreement_2026.pdf",
-        status: "analyzed",
-        clauses: [
-          {
-            clause_index: 1,
-            original_text:
-              "Section 8.2 (Term and Auto-Renewal): This Agreement shall automatically renew for successive twelve (12) month periods unless either party provides written notice of non-renewal at least ninety (90) days prior to the expiration of the then-current term.",
-            risk_flags: [
-              {
-                risk_level: "high",
-                compliance_rule: "Automatic Renewal Clause Lock-in Trap",
-                explanation:
-                  "Requires 90-day non-renewal notice. Standard corporate policy mandates maximum 30-day notice to prevent unintended renewals.",
-                source_citation:
-                  "unless either party provides written notice of non-renewal at least ninety (90) days prior to the expiration",
-              },
-            ],
-          },
-          {
-            clause_index: 2,
-            original_text:
-              "Section 14.1 (Liability Cap): In no event shall Supplier's aggregate liability exceed three (3) times the total fees paid in the twelve (12) months preceding the claim, except for breaches resulting in uncapped consequential damages.",
-            risk_flags: [
-              {
-                risk_level: "critical",
-                compliance_rule: "Unlimited Consequential Damages / Liability Exposure",
-                explanation:
-                  "Clause exposes the organization to uncapped liability for downstream consequential damages.",
-                source_citation: "uncapped consequential damages",
-              },
-            ],
-          },
-          {
-            clause_index: 3,
-            original_text:
-              "Section 21.4 (Data Processing): Customer agrees that personal data may be processed and stored in any jurisdiction where Supplier maintains facilities, without requiring prior written approval.",
-            risk_flags: [
-              {
-                risk_level: "critical",
-                compliance_rule: "GDPR / Cross-Border Data Transfer Non-Compliance",
-                explanation:
-                  "Unrestricted international transfer of personal data without standard contractual clauses violates EU GDPR Article 44-49.",
-                source_citation:
-                  "personal data may be processed and stored in any jurisdiction... without requiring prior written approval",
-              },
-            ],
-          },
-        ],
-        key_dates: [
-          { event_type: "renewal", event_date: "2026-10-29", status: "upcoming" },
-          { event_type: "expiry", event_date: "2027-01-27", status: "upcoming" },
-        ],
-      });
+      setSelectedContract(null);
     }
     setLoadingDetail(false);
   };
@@ -216,7 +164,7 @@ export default function App() {
   const handleDeleteContract = async (contractId) => {
     if (confirm("Are you sure you want to delete this contract? This will cascade delete all extracted clauses, risks, and dates.")) {
       await deleteContractApi(contractId);
-      loadData();
+      await loadDataForUser(currentUser);
     }
   };
 
@@ -249,7 +197,7 @@ export default function App() {
             value={currentUser.email}
             onChange={(e) => {
               const u = DEMO_USERS.find((x) => x.email === e.target.value);
-              if (u) setCurrentUser(u);
+              if (u) handleSwitchPersona(u);
             }}
             className="w-full bg-surface-800 border border-surface-700 text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-brand-500"
           >
@@ -375,25 +323,38 @@ export default function App() {
           {activeTab === "dashboard" && (
             <DashboardView
               contracts={contracts}
+              allRisks={allRisks}
               onViewClauses={handleViewClauses}
               onNavigateUpload={() => setActiveTab("upload")}
             />
           )}
           {activeTab === "upload" && (
             <UploadView
-              onUploadSuccess={() => {
-                loadData();
+              onUploadSuccess={async () => {
+                await loadDataForUser(currentUser);
                 setActiveTab("dashboard");
               }}
             />
           )}
-          {activeTab === "risks" && <RiskAnalysisView />}
-          {activeTab === "obligations" && <ObligationsView obligations={obligations} />}
+          {activeTab === "risks" && (
+            <RiskAnalysisView
+              allRisks={allRisks}
+              onViewClauses={handleViewClauses}
+              onNavigateUpload={() => setActiveTab("upload")}
+            />
+          )}
+          {activeTab === "obligations" && (
+            <ObligationsView
+              obligations={obligations}
+              onNavigateUpload={() => setActiveTab("upload")}
+            />
+          )}
           {activeTab === "documents" && (
             <DocumentsView
               contracts={contracts}
               onViewClauses={handleViewClauses}
               onDelete={handleDeleteContract}
+              onNavigateUpload={() => setActiveTab("upload")}
             />
           )}
           {activeTab === "audit" && <AuditTrailView currentUser={currentUser} />}
@@ -420,15 +381,33 @@ export default function App() {
    VIEW COMPONENTS
    ════════════════════════════════════════════════════════════ */
 
-function DashboardView({ contracts, onViewClauses, onNavigateUpload }) {
+function DashboardView({ contracts, allRisks, onViewClauses, onNavigateUpload }) {
   const totalRisks = contracts.reduce((acc, c) => acc + (c.risk_count || 0), 0);
   const totalClauses = contracts.reduce((acc, c) => acc + (c.clause_count || 0), 0);
+  const cleanContracts = contracts.filter((c) => (c.risk_count || 0) === 0).length;
+  const complianceScore =
+    contracts.length > 0
+      ? `${Math.round((cleanContracts / contracts.length) * 100)}%`
+      : "100%";
 
   const stats = [
     { label: "Contracts Ingested", value: contracts.length.toString(), icon: FileText, color: "text-brand-400", bg: "bg-brand-500/10" },
     { label: "Clauses Extracted", value: totalClauses.toString(), icon: ShieldCheck, color: "text-blue-400", bg: "bg-blue-500/10" },
     { label: "Grounded Risk Flags", value: totalRisks.toString(), icon: AlertTriangle, color: "text-red-400", bg: "bg-red-500/10" },
-    { label: "Compliance Score", value: "88%", icon: CheckCircle, color: "text-green-400", bg: "bg-green-500/10" },
+    { label: "Compliance Score", value: complianceScore, icon: CheckCircle, color: "text-green-400", bg: "bg-green-500/10" },
+  ];
+
+  const criticalCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "critical").length;
+  const highCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "high").length;
+  const mediumCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "medium").length;
+  const lowCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "low").length;
+  const totalR = allRisks.length || 1;
+
+  const severityData = [
+    { level: "Critical", count: criticalCount, percent: allRisks.length ? Math.round((criticalCount / totalR) * 100) : 0, color: "bg-red-500" },
+    { level: "High", count: highCount, percent: allRisks.length ? Math.round((highCount / totalR) * 100) : 0, color: "bg-amber-500" },
+    { level: "Medium", count: mediumCount, percent: allRisks.length ? Math.round((mediumCount / totalR) * 100) : 0, color: "bg-yellow-500" },
+    { level: "Low", count: lowCount, percent: allRisks.length ? Math.round((lowCount / totalR) * 100) : 0, color: "bg-green-500" },
   ];
 
   return (
@@ -467,52 +446,68 @@ function DashboardView({ contracts, onViewClauses, onNavigateUpload }) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-surface-700 text-surface-200 text-xs uppercase">
-                  <th className="py-2.5 font-medium">Contract</th>
-                  <th className="py-2.5 font-medium">Clauses</th>
-                  <th className="py-2.5 font-medium">Risks</th>
-                  <th className="py-2.5 font-medium">Status</th>
-                  <th className="py-2.5 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-700/50">
-                {contracts.map((c) => (
-                  <tr key={c.contract_id} className="hover:bg-surface-750/30 transition-colors">
-                    <td className="py-3 font-medium text-white flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-brand-400 shrink-0" />
-                      <span className="truncate max-w-[200px]" title={c.file_name}>
-                        {c.file_name}
-                      </span>
-                    </td>
-                    <td className="py-3 text-surface-200 text-xs">{c.clause_count || 3}</td>
-                    <td className="py-3">
-                      {(c.risk_count || 0) > 0 ? (
-                        <span className="badge bg-red-500/20 text-red-400 font-medium">
-                          {c.risk_count} Flags
-                        </span>
-                      ) : (
-                        <span className="badge bg-green-500/15 text-green-400">Clean</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      <span className="badge bg-green-500/15 text-green-400 capitalize">
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right">
-                      <button
-                        onClick={() => onViewClauses(c.contract_id)}
-                        className="text-xs text-brand-400 hover:text-brand-300 font-medium hover:underline"
-                      >
-                        Explore Clauses
-                      </button>
-                    </td>
+            {contracts.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <FileText className="w-10 h-10 mx-auto text-surface-300 opacity-60" />
+                <p className="text-sm font-medium text-white">No Contracts Uploaded</p>
+                <p className="text-xs text-surface-200 max-w-sm mx-auto">
+                  Upload a PDF, Word (DOCX), or Text contract to extract clauses and screen for compliance risks.
+                </p>
+                <button
+                  onClick={onNavigateUpload}
+                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors inline-block"
+                >
+                  Upload Contract
+                </button>
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-surface-700 text-surface-200 text-xs uppercase">
+                    <th className="py-2.5 font-medium">Contract</th>
+                    <th className="py-2.5 font-medium">Clauses</th>
+                    <th className="py-2.5 font-medium">Risks</th>
+                    <th className="py-2.5 font-medium">Status</th>
+                    <th className="py-2.5 font-medium text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-surface-700/50">
+                  {contracts.map((c) => (
+                    <tr key={c.contract_id} className="hover:bg-surface-750/30 transition-colors">
+                      <td className="py-3 font-medium text-white flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-brand-400 shrink-0" />
+                        <span className="truncate max-w-[200px]" title={c.file_name}>
+                          {c.file_name}
+                        </span>
+                      </td>
+                      <td className="py-3 text-surface-200 text-xs">{c.clause_count || 0}</td>
+                      <td className="py-3">
+                        {(c.risk_count || 0) > 0 ? (
+                          <span className="badge bg-red-500/20 text-red-400 font-medium">
+                            {c.risk_count} Flags
+                          </span>
+                        ) : (
+                          <span className="badge bg-green-500/15 text-green-400">Clean</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        <span className="badge bg-green-500/15 text-green-400 capitalize">
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => onViewClauses(c.contract_id)}
+                          className="text-xs text-brand-400 hover:text-brand-300 font-medium hover:underline"
+                        >
+                          Explore Clauses
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -520,16 +515,11 @@ function DashboardView({ contracts, onViewClauses, onNavigateUpload }) {
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white">Risk Severity Spectrum</h3>
-            <span className="badge bg-red-500/20 text-red-300">Citations Enforced</span>
+            <span className="badge bg-red-500/20 text-red-300">Live Grounding</span>
           </div>
 
           <div className="space-y-3">
-            {[
-              { level: "Critical", count: 1, percent: 50, color: "bg-red-500" },
-              { level: "High", count: 1, percent: 50, color: "bg-amber-500" },
-              { level: "Medium", count: 0, percent: 0, color: "bg-yellow-500" },
-              { level: "Low", count: 0, percent: 0, color: "bg-green-500" },
-            ].map((r) => (
+            {severityData.map((r) => (
               <div key={r.level} className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-surface-200">{r.level}</span>
@@ -686,7 +676,12 @@ function UploadView({ onUploadSuccess }) {
   );
 }
 
-function RiskAnalysisView() {
+function RiskAnalysisView({ allRisks, onViewClauses, onNavigateUpload }) {
+  const criticalCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "critical").length;
+  const highCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "high").length;
+  const mediumCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "medium").length;
+  const lowCount = allRisks.filter((r) => r.risk_level?.toLowerCase() === "low").length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -697,113 +692,175 @@ function RiskAnalysisView() {
           </p>
         </div>
         <div className="flex gap-2">
-          <span className="badge bg-red-500/20 text-red-300 font-semibold">1 Critical</span>
-          <span className="badge bg-amber-500/20 text-amber-300 font-semibold">1 High</span>
+          {criticalCount > 0 && (
+            <span className="badge bg-red-500/20 text-red-300 font-semibold">{criticalCount} Critical</span>
+          )}
+          {highCount > 0 && (
+            <span className="badge bg-amber-500/20 text-amber-300 font-semibold">{highCount} High</span>
+          )}
+          {mediumCount > 0 && (
+            <span className="badge bg-yellow-500/20 text-yellow-300 font-semibold">{mediumCount} Medium</span>
+          )}
+          {lowCount > 0 && (
+            <span className="badge bg-green-500/20 text-green-300 font-semibold">{lowCount} Low</span>
+          )}
+          {allRisks.length === 0 && (
+            <span className="badge bg-green-500/15 text-green-400 font-semibold">All Clean</span>
+          )}
         </div>
       </div>
 
-      <div className="space-y-4">
-        {/* Risk Card 1 */}
-        <div className="card border-l-4 border-l-red-500 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="badge bg-red-500/20 text-red-400 uppercase tracking-wide">Critical</span>
-              <h4 className="text-sm font-bold text-white">
-                GDPR / Cross-Border Data Transfer Non-Compliance
-              </h4>
-            </div>
-            <span className="text-xs text-surface-200">Acme_Cloud_Services_Agreement_2026.pdf</span>
-          </div>
-
-          <p className="text-xs text-surface-200 leading-relaxed">
-            <strong className="text-surface-100">Analysis:</strong> Unrestricted international transfer
-            of personal data without standard contractual clauses violates EU GDPR Articles 44–49.
+      {allRisks.length === 0 ? (
+        <div className="card text-center py-16 space-y-4">
+          <ShieldCheck className="w-12 h-12 mx-auto text-green-400" />
+          <h4 className="text-base font-bold text-white">No Compliance Risks Detected</h4>
+          <p className="text-xs text-surface-200 max-w-md mx-auto">
+            There are currently no risk flags for the agreements accessible to your account.
+            Upload new contracts to run automated semantic screening.
           </p>
-
-          <div className="p-3 bg-surface-900 rounded-lg border border-surface-700 text-xs font-mono text-brand-300">
-            <p className="text-[10px] uppercase font-bold text-surface-200 mb-1 font-sans">
-              Exact Source Citation (Grounding Evidence):
-            </p>
-            &ldquo;personal data may be processed and stored in any jurisdiction where Supplier or its
-            sub-processors maintain facilities, without requiring prior written approval or additional
-            Standard Contractual Clauses.&rdquo;
-          </div>
+          <button
+            onClick={onNavigateUpload}
+            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors inline-block"
+          >
+            Upload Contract
+          </button>
         </div>
+      ) : (
+        <div className="space-y-4">
+          {allRisks.map((risk, idx) => {
+            const level = risk.risk_level?.toLowerCase() || "low";
+            const borderColors = {
+              critical: "border-l-red-500",
+              high: "border-l-amber-500",
+              medium: "border-l-yellow-500",
+              low: "border-l-green-500",
+            };
+            const badgeColors = {
+              critical: "bg-red-500/20 text-red-400",
+              high: "bg-amber-500/20 text-amber-400",
+              medium: "bg-yellow-500/20 text-yellow-400",
+              low: "bg-green-500/20 text-green-400",
+            };
 
-        {/* Risk Card 2 */}
-        <div className="card border-l-4 border-l-amber-500 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="badge bg-amber-500/20 text-amber-400 uppercase tracking-wide">High</span>
-              <h4 className="text-sm font-bold text-white">
-                Automatic Renewal Clause Lock-in Trap
-              </h4>
-            </div>
-            <span className="text-xs text-surface-200">Acme_Cloud_Services_Agreement_2026.pdf</span>
-          </div>
+            return (
+              <div
+                key={risk.flag_id || idx}
+                className={`card border-l-4 ${borderColors[level] || "border-l-brand-500"} space-y-3`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`badge ${badgeColors[level] || "bg-surface-700 text-white"} uppercase tracking-wide`}>
+                      {risk.risk_level}
+                    </span>
+                    <h4 className="text-sm font-bold text-white">
+                      {risk.compliance_rule}
+                    </h4>
+                  </div>
+                  {risk.file_name && (
+                    <span className="text-xs text-surface-200 font-mono">{risk.file_name}</span>
+                  )}
+                </div>
 
-          <p className="text-xs text-surface-200 leading-relaxed">
-            <strong className="text-surface-100">Analysis:</strong> Requires 90-day written non-renewal
-            notice. Standard corporate procurement policy restricts non-renewal windows to a maximum of 30
-            days.
-          </p>
+                <p className="text-xs text-surface-200 leading-relaxed">
+                  <strong className="text-surface-100">Analysis:</strong> {risk.explanation}
+                </p>
 
-          <div className="p-3 bg-surface-900 rounded-lg border border-surface-700 text-xs font-mono text-brand-300">
-            <p className="text-[10px] uppercase font-bold text-surface-200 mb-1 font-sans">
-              Exact Source Citation (Grounding Evidence):
-            </p>
-            &ldquo;This Agreement shall automatically renew for successive twelve (12) month periods
-            unless either party provides written notice of non-renewal at least ninety (90) days prior to the
-            expiration...&rdquo;
-          </div>
+                {risk.source_citation && (
+                  <div className="p-3 bg-surface-900 rounded-lg border border-surface-700 text-xs font-mono text-brand-300">
+                    <p className="text-[10px] uppercase font-bold text-surface-200 mb-1 font-sans">
+                      Exact Source Citation (Grounding Evidence):
+                    </p>
+                    &ldquo;{risk.source_citation}&rdquo;
+                  </div>
+                )}
+
+                {risk.contract_id && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={() => onViewClauses(risk.contract_id)}
+                      className="text-xs text-brand-400 hover:text-brand-300 font-medium hover:underline flex items-center gap-1"
+                    >
+                      View in Contract Explorer &rarr;
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function ObligationsView({ obligations }) {
-  const displayDates =
-    obligations && obligations.length > 0
-      ? obligations
-      : [
-          { event_type: "renewal", event_date: "2026-10-29", status: "upcoming" },
-          { event_type: "review", event_date: "2026-09-29", status: "upcoming" },
-          { event_type: "expiry", event_date: "2027-01-27", status: "upcoming" },
-          { event_type: "expiry", event_date: "2027-09-14", status: "upcoming" },
-        ];
+function ObligationsView({ obligations, onNavigateUpload }) {
+  const displayDates = Array.isArray(obligations) ? obligations : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-white">Contract Obligations & Deadline Tracker</h3>
-          <span className="badge bg-brand-500/20 text-brand-300">Milestones Extracted</span>
+          <div>
+            <h3 className="text-sm font-bold text-white">Contract Obligations & Deadline Tracker</h3>
+            <p className="text-xs text-surface-200">Real-time extracted milestone dates across accessible agreements</p>
+          </div>
+          <span className="badge bg-brand-500/20 text-brand-300">
+            {displayDates.length} Milestone{displayDates.length !== 1 ? "s" : ""}
+          </span>
         </div>
 
-        <div className="space-y-3">
-          {displayDates.map((d, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-3.5 bg-surface-900/60 rounded-lg border border-surface-700/60"
-            >
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-brand-400" />
-                <div>
-                  <p className="text-sm font-semibold text-white capitalize">{d.event_type} Deadline</p>
-                  <p className="text-xs text-surface-200">Due: {d.event_date}</p>
+        {displayDates.length === 0 ? (
+          <div className="text-center py-12 space-y-3">
+            <CalendarClock className="w-10 h-10 mx-auto text-surface-300 opacity-60" />
+            <p className="text-sm font-medium text-white">No Upcoming Obligations</p>
+            <p className="text-xs text-surface-200 max-w-sm mx-auto">
+              No milestones or renewal deadlines extracted yet. Upload agreements to track contract timelines.
+            </p>
+            {onNavigateUpload && (
+              <button
+                onClick={onNavigateUpload}
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors inline-block"
+              >
+                Upload Contract
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayDates.map((d, i) => (
+              <div
+                key={d.date_id || i}
+                className="flex items-center justify-between p-3.5 bg-surface-900/60 rounded-lg border border-surface-700/60 hover:border-surface-600 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-brand-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-white capitalize">{d.event_type} Deadline</p>
+                    <p className="text-xs text-surface-200">
+                      Due: <span className="font-mono text-surface-100">{d.event_date}</span>
+                      {d.file_name && <span> • {d.file_name}</span>}
+                    </p>
+                  </div>
                 </div>
+                <span className={`badge ${
+                  d.status === "overdue"
+                    ? "bg-red-500/15 text-red-400"
+                    : d.status === "completed"
+                    ? "bg-green-500/15 text-green-400"
+                    : "bg-amber-500/15 text-amber-400"
+                } capitalize`}>
+                  {d.status}
+                </span>
               </div>
-              <span className="badge bg-amber-500/15 text-amber-400 capitalize">{d.status}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function DocumentsView({ contracts, onViewClauses, onDelete }) {
+function DocumentsView({ contracts, onViewClauses, onDelete, onNavigateUpload }) {
   return (
     <div className="card space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -811,43 +868,61 @@ function DocumentsView({ contracts, onViewClauses, onDelete }) {
           <h3 className="text-sm font-bold text-white">Contract Documents Repository</h3>
           <p className="text-xs text-surface-200">Row-Level Security filtered view</p>
         </div>
-        <span className="text-xs text-surface-200">{contracts.length} agreements on record</span>
+        <span className="text-xs text-surface-200">{contracts.length} agreement{contracts.length !== 1 ? "s" : ""} on record</span>
       </div>
 
-      <div className="space-y-2.5">
-        {contracts.map((c) => (
-          <div
-            key={c.contract_id}
-            className="flex items-center justify-between p-3.5 bg-surface-900/60 rounded-lg border border-surface-700 hover:border-surface-600 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-brand-400" />
-              <div>
-                <p className="text-sm font-semibold text-white">{c.file_name}</p>
-                <p className="text-xs text-surface-200">
-                  UUID: {c.contract_id.substring(0, 8)}... • {c.clause_count || 3} Clauses •{" "}
-                  {c.risk_count || 0} Flags
-                </p>
+      {contracts.length === 0 ? (
+        <div className="text-center py-12 space-y-3">
+          <FileText className="w-10 h-10 mx-auto text-surface-300 opacity-60" />
+          <p className="text-sm font-medium text-white">No Contracts Available</p>
+          <p className="text-xs text-surface-200 max-w-sm mx-auto">
+            No agreements match your permissions. Upload a document to start analyzing.
+          </p>
+          {onNavigateUpload && (
+            <button
+              onClick={onNavigateUpload}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition-colors inline-block"
+            >
+              Upload Contract
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {contracts.map((c) => (
+            <div
+              key={c.contract_id}
+              className="flex items-center justify-between p-3.5 bg-surface-900/60 rounded-lg border border-surface-700 hover:border-surface-600 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-4 h-4 text-brand-400" />
+                <div>
+                  <p className="text-sm font-semibold text-white">{c.file_name}</p>
+                  <p className="text-xs text-surface-200">
+                    UUID: {c.contract_id ? c.contract_id.substring(0, 8) : "..."}... • {c.clause_count || 0} Clauses •{" "}
+                    {c.risk_count || 0} Flags
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => onViewClauses(c.contract_id)}
+                  className="px-3 py-1 bg-surface-800 hover:bg-surface-700 text-brand-300 border border-surface-700 text-xs rounded transition-colors"
+                >
+                  Explore Clauses
+                </button>
+                <button
+                  onClick={() => onDelete(c.contract_id)}
+                  className="p-1.5 text-surface-200 hover:text-red-400 transition-colors"
+                  title="Delete contract"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => onViewClauses(c.contract_id)}
-                className="px-3 py-1 bg-surface-800 hover:bg-surface-700 text-brand-300 border border-surface-700 text-xs rounded transition-colors"
-              >
-                Explore Clauses
-              </button>
-              <button
-                onClick={() => onDelete(c.contract_id)}
-                className="p-1.5 text-surface-200 hover:text-red-400 transition-colors"
-                title="Delete contract"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -863,22 +938,14 @@ function AuditTrailView({ currentUser }) {
     if (result.ok && Array.isArray(result.data)) {
       setLogs(result.data);
     } else {
-      // Fallback demo data when API is offline
-      setLogs([
-        { id: 1, action: "USER_LOGIN", user_email: "admin@clauseiq.com", detail: "User logged in successfully", created_at: new Date().toISOString() },
-        { id: 2, action: "CONTRACT_UPLOADED", user_email: "admin@clauseiq.com", detail: "Uploaded Acme_Cloud_Services_Agreement_2026.pdf", created_at: new Date().toISOString() },
-        { id: 3, action: "CONTRACT_ANALYZED", user_email: "admin@clauseiq.com", detail: "AI analysis completed: 3 clauses, 2 risk flags", created_at: new Date().toISOString() },
-        { id: 4, action: "CONTRACT_UPLOADED", user_email: "reviewer@clauseiq.com", detail: "Uploaded Apex_Mutual_NDA_v2.docx", created_at: new Date().toISOString() },
-        { id: 5, action: "CONTRACT_ANALYZED", user_email: "reviewer@clauseiq.com", detail: "AI analysis completed: 2 clauses, 0 risk flags", created_at: new Date().toISOString() },
-        { id: 6, action: "CONTRACT_DELETED", user_email: "admin@clauseiq.com", detail: "Deleted contract c3003-xxxx (cascade)", created_at: new Date().toISOString() },
-      ]);
+      setLogs([]);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     loadLogs();
-  }, []);
+  }, [currentUser]);
 
   const actionColors = {
     USER_LOGIN: { bg: "bg-blue-500/15", text: "text-blue-400" },

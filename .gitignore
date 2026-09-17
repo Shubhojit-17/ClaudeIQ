@@ -18,6 +18,8 @@ build/
 venv/
 env/
 .Python
+*.db
+*.sqlite3
 
 # ─── Node.js ────────────────────────────────────────────────
 node_modules/
