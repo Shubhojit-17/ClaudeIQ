@@ -126,11 +126,23 @@ def run_phase4_integration():
         view_token = view_login.json()["access_token"]
         view_headers = {"Authorization": f"Bearer {view_token}"}
 
-        audit_forbidden = client.get("/api/audit-logs", headers=view_headers)
-        assert audit_forbidden.status_code == 403, f"Expected 403 Forbidden, got {audit_forbidden.status_code}"
-        print("[SUCCESS] Step 4: RBAC access gating verified (viewer denied audit logs).")
+        # Step 4: Hierarchical Role-Based Access Control on Audit Logs
+        # Viewer can only see their own audit events, not admin or reviewer
+        view_audit = client.get("/api/audit-logs", headers=view_headers)
+        assert view_audit.status_code == 200, f"Expected 200 OK, got {view_audit.status_code}"
+        view_logs = view_audit.json()
+        assert all(l["user_email"] == "viewer@audit.clauseiq" for l in view_logs), "Viewer saw other users' audit logs!"
+        assert not any(l["user_email"] == "admin@audit.clauseiq" for l in view_logs), "Viewer saw admin audit logs!"
+        print(f"[SUCCESS] Step 4a: Viewer strictly limited to self-activity logs ({len(view_logs)} entries).")
 
-        # Step 5: Admin accesses compliance audit logs
+        # Reviewer can see reviewer and viewer logs, but NOT admin logs
+        rev_audit = client.get("/api/audit-logs", headers=rev_headers)
+        assert rev_audit.status_code == 200, f"Expected 200 OK, got {rev_audit.status_code}"
+        rev_logs = rev_audit.json()
+        assert not any(l["user_email"] == "admin@audit.clauseiq" for l in rev_logs), "Reviewer saw upper role (admin) audit logs!"
+        print(f"[SUCCESS] Step 4b: Reviewer hierarchical scoping verified (admin logs completely masked).")
+
+        # Step 5: Admin accesses compliance audit logs (full visibility)
         audit_resp = client.get("/api/audit-logs", headers=admin_headers)
         assert audit_resp.status_code == 200
         audit_logs = audit_resp.json()
@@ -138,7 +150,10 @@ def run_phase4_integration():
         actions = [a["action"] for a in audit_logs]
         assert "USER_LOGIN" in actions
         assert "CONTRACT_UPLOADED" in actions
-        print(f"[SUCCESS] Step 5: Compliance audit trail verified ({len(audit_logs)} audit actions recorded: {actions[:4]}).")
+        # Verify admin sees actions from all roles
+        admin_seen_emails = {a["user_email"] for a in audit_logs}
+        assert "admin@audit.clauseiq" in admin_seen_emails
+        print(f"[SUCCESS] Step 5: Compliance audit trail verified ({len(audit_logs)} audit actions recorded across all roles).")
 
         # Step 6: Cascading deletion & cleanup audit
         del_resp = client.delete(f"/api/contracts/{contract_id}", headers=admin_headers)

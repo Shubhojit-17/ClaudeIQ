@@ -494,15 +494,13 @@ async def list_audit_logs(
     db: Session = Depends(get_db),
 ):
     """
-    Returns the compliance audit trail.
-    Available to admin and reviewer users for SOC 2 / compliance review.
+    Returns the compliance audit trail governed by hierarchical Role-Based Access Control (RBAC):
+    - Admin (highest): Full visibility across all enterprise audit events.
+    - Reviewer (middle): Visibility of own actions and lower roles (Viewer). Upper role (Admin) actions hidden.
+    - Viewer (lowest): Visibility strictly scoped to own actions.
     """
-    if current_user.role not in ["admin", "reviewer"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Audit logs require compliance or administrator privileges.",
-        )
-    return crud.get_audit_logs(db, skip=skip, limit=limit)
+    return crud.get_audit_logs(db, current_user=current_user, skip=skip, limit=limit)
+
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -1010,11 +1010,43 @@ function AuditTrailView({ currentUser }) {
     CONTRACT_UPLOADED: { bg: "bg-green-500/15", text: "text-green-400" },
     CONTRACT_ANALYZED: { bg: "bg-brand-500/15", text: "text-brand-400" },
     CONTRACT_DELETED: { bg: "bg-red-500/15", text: "text-red-400" },
+    ALL_CONTRACTS_CLEARED: { bg: "bg-red-500/20", text: "text-red-400" },
+    AI_SETTINGS_UPDATED: { bg: "bg-purple-500/15", text: "text-purple-400" },
   };
 
-  const actionTypes = ["all", "USER_LOGIN", "CONTRACT_UPLOADED", "CONTRACT_ANALYZED", "CONTRACT_DELETED"];
+  const actionTypes = [
+    "all",
+    "USER_LOGIN",
+    "CONTRACT_UPLOADED",
+    "CONTRACT_ANALYZED",
+    "CONTRACT_DELETED",
+    "ALL_CONTRACTS_CLEARED",
+  ];
 
   const filteredLogs = filterAction === "all" ? logs : logs.filter((l) => l.action === filterAction);
+
+  const formatAuditTimestamp = (raw) => {
+    if (!raw) return "—";
+    let str = String(raw);
+    if (!str.endsWith("Z") && !str.includes("+") && !str.includes("-", 10)) {
+      str += "Z";
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) {
+      const fallback = new Date(raw);
+      if (!isNaN(fallback.getTime())) return fallback.toLocaleString();
+      return String(raw);
+    }
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -1026,7 +1058,7 @@ function AuditTrailView({ currentUser }) {
             Audit Trail Log
           </h3>
           <p className="text-xs text-surface-200 mt-0.5">
-            Immutable record of all system actions for compliance reporting
+            Immutable record of system actions governed by hierarchical Role-Based Access Control (RBAC)
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -1041,6 +1073,32 @@ function AuditTrailView({ currentUser }) {
             Refresh
           </button>
         </div>
+      </div>
+
+      {/* Dynamic Role-Based Scope Banner */}
+      <div className="p-3.5 bg-surface-800/80 rounded-lg border border-surface-700 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-brand-400 shrink-0" />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-white">Role-Based Audit Scope:</span>
+              <span className="badge bg-brand-500/20 text-brand-300 font-mono text-[10px] uppercase">
+                {currentUser.role}
+              </span>
+            </div>
+            <p className="text-[11px] text-surface-200 mt-0.5">
+              {currentUser.role === "admin" &&
+                "Global Enterprise View — You have full visibility across all system events (Admin, Reviewer, Viewer, and System)."}
+              {currentUser.role === "reviewer" &&
+                "Hierarchical Scope — You can view your own activity and lower role (Viewer) events. Upper role (Admin) events are restricted."}
+              {currentUser.role === "viewer" &&
+                "Self-Activity Scope — You can strictly view your own audit trail events. Upper role (Reviewer, Admin) events are restricted."}
+            </p>
+          </div>
+        </div>
+        <span className="text-[11px] text-surface-300 font-mono shrink-0 hidden sm:inline">
+          Strict RBAC Filter Active
+        </span>
       </div>
 
       {/* Filter Buttons */}
@@ -1087,20 +1145,20 @@ function AuditTrailView({ currentUser }) {
                   filteredLogs.map((log, idx) => {
                     const colors = actionColors[log.action] || { bg: "bg-surface-700", text: "text-surface-200" };
                     return (
-                      <tr key={log.id || idx} className="hover:bg-surface-800/40 transition-colors">
+                      <tr key={log.log_id || log.id || idx} className="hover:bg-surface-800/40 transition-colors">
                         <td className="py-3 px-5 text-xs text-surface-200 font-mono whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleString()}
+                          {formatAuditTimestamp(log.timestamp || log.created_at)}
                         </td>
                         <td className="py-3 px-5">
                           <span className={`badge ${colors.bg} ${colors.text} text-xs font-semibold`}>
                             {log.action}
                           </span>
                         </td>
-                        <td className="py-3 px-5 text-xs text-white">
+                        <td className="py-3 px-5 text-xs text-white font-mono">
                           {log.user_email || "system"}
                         </td>
-                        <td className="py-3 px-5 text-xs text-surface-200 max-w-sm truncate" title={log.detail}>
-                          {log.detail}
+                        <td className="py-3 px-5 text-xs text-surface-200 max-w-sm truncate" title={log.details || log.detail}>
+                          {log.details || log.detail || "System event recorded"}
                         </td>
                       </tr>
                     );
@@ -1108,7 +1166,7 @@ function AuditTrailView({ currentUser }) {
                 ) : (
                   <tr>
                     <td colSpan="4" className="py-8 text-center text-sm text-surface-200">
-                      No audit events match the current filter.
+                      No audit events match your role permissions or the selected filter.
                     </td>
                   </tr>
                 )}
@@ -1122,13 +1180,13 @@ function AuditTrailView({ currentUser }) {
       <div className="card !p-4 bg-surface-800/60 border-surface-700 space-y-2">
         <p className="text-xs font-semibold text-white flex items-center gap-1.5">
           <Lock className="w-3.5 h-3.5 text-brand-400" />
-          Tamper-Proof Audit Architecture
+          Tamper-Proof Hierarchical Audit Architecture
         </p>
         <p className="text-[11px] text-surface-200 leading-relaxed">
-          Every system action (login, upload, analysis, deletion) is recorded as an immutable
-          audit log entry with a server-side timestamp. The audit_logs table stores the acting
-          user ID, action type, and a free-text detail field. These records support SOC 2 Type II
-          and ISO 27001 compliance reporting requirements.
+          Every system action (login, upload, analysis, deletion, settings change) is recorded as an immutable
+          audit log entry with a server-side timestamp. Row-Level Security and Role-Based Access Control ensure
+          that higher-level actions are never leaked to lower-tier roles, satisfying SOC 2 Type II, ISO 27001,
+          and enterprise compliance review requirements.
         </p>
       </div>
     </div>

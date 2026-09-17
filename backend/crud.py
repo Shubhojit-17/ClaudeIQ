@@ -12,7 +12,7 @@ from typing import List, Optional
 from datetime import datetime, date
 
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 
 from models import AuditLog, Contract, ContractAccess, ExtractedClause, KeyDate, RiskFlag, User
 from schemas import ContractCreate, UserCreate
@@ -310,12 +310,64 @@ def create_audit_log(
     return entry
 
 
-def get_audit_logs(db: Session, skip: int = 0, limit: int = 50) -> List[AuditLog]:
-    return (
-        db.query(AuditLog)
-        .order_by(AuditLog.timestamp.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+def get_audit_logs(
+    db: Session,
+    current_user: User,
+    skip: int = 0,
+    limit: int = 50,
+) -> List[AuditLog]:
+    """
+    Returns compliance audit logs according to role hierarchy:
+    - admin (highest): Can view ALL audit logs across the enterprise (admin, reviewer, viewer, system).
+    - reviewer (middle): Can view their own audit logs + lower role (viewer) logs.
+                         CANNOT view upper role (admin) logs.
+    - viewer (lowest): Can ONLY view their own audit logs.
+                       CANNOT view reviewer or admin logs.
+    """
+    if current_user.role == "admin":
+        return (
+            db.query(AuditLog)
+            .order_by(AuditLog.timestamp.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    if current_user.role == "reviewer":
+        # Upper role to viewer: can view own logs + any lower role (viewer) logs.
+        # Excludes all admin logs.
+        viewer_user_ids = select(User.user_id).filter(User.role == "viewer")
+        viewer_emails = select(User.email).filter(User.role == "viewer")
+
+        return (
+            db.query(AuditLog)
+            .filter(
+                or_(
+                    AuditLog.user_id == current_user.user_id,
+                    AuditLog.user_email == current_user.email,
+                    AuditLog.user_id.in_(viewer_user_ids),
+                    AuditLog.user_email.in_(viewer_emails),
+                )
+            )
+            .order_by(AuditLog.timestamp.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+    else:
+        # viewer or lower roles: strictly view only their own audit trail
+        return (
+            db.query(AuditLog)
+            .filter(
+                or_(
+                    AuditLog.user_id == current_user.user_id,
+                    AuditLog.user_email == current_user.email,
+                )
+            )
+            .order_by(AuditLog.timestamp.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
 
