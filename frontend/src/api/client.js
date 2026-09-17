@@ -105,6 +105,20 @@ export const deleteContractApi = async (contractId) => {
   }
 };
 
+export const markContractCompletedApi = async (contractId) => {
+  try {
+    const response = await apiClient.post(`/api/contracts/${contractId}/complete`);
+    return { ok: true, data: response.data, error: null };
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      error: error.response?.data?.detail || error.message || "Failed to mark contract as completed",
+    };
+  }
+};
+
+
 export const fetchObligations = async () => {
   try {
     const response = await apiClient.get("/api/obligations");

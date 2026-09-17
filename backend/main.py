@@ -296,12 +296,15 @@ async def upload_contract(
     try:
         # 2. Ingestion: Extract text & Chunk clauses
         raw_text, clause_texts = process_document(file_name, file_bytes)
-        clauses = crud.create_clauses_bulk(db, contract.contract_id, clause_texts)
 
-        # 3. AI Intelligence: Screen clauses for risks & dates
+        # 3. AI Intelligence: Screen clauses for risks, dates, summaries & topics
         ai_analysis = ai_engine.analyze_clauses(clause_texts)
 
-        # 4. Persist Grounded Risk Flags & Dates
+        # 4. Save clauses with AI summary & topic
+        clauses = crud.create_clauses_bulk(db, contract.contract_id, ai_analysis["clause_results"])
+        crud.update_contract_executive_summary(db, contract.contract_id, ai_analysis.get("executive_summary", ""))
+
+        # 5. Persist Grounded Risk Flags & Dates
         for clause_obj, res in zip(clauses, ai_analysis["clause_results"]):
             for risk in res["risk_flags"]:
                 crud.create_risk_flag(
@@ -321,7 +324,7 @@ async def upload_contract(
                     status=kd["status"],
                 )
 
-        # 5. Update Status & Audit Log
+        # 6. Update Status & Audit Log
         crud.update_contract_status(db, contract.contract_id, "analyzed")
         crud.create_audit_log(
             db,
@@ -332,6 +335,7 @@ async def upload_contract(
             details=f"Uploaded {file_name}: extracted {len(clauses)} clauses, detected {ai_analysis['summary']['total_risks']} risks",
         )
         db.refresh(contract)
+        contract.topic_comparisons = ai_analysis.get("topic_comparisons", [])
         return contract
 
     except Exception as exc:
@@ -348,13 +352,46 @@ async def get_contract_detail(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Fetches complete contract details, clauses, risk flags, and key dates."""
+    """Fetches complete contract details, clauses, AI summaries, topic comparisons, risk flags, and key dates."""
     contract = crud.get_contract_by_id(db, contract_id, user=current_user)
     if not contract:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Contract not found or access denied.",
         )
+
+    # Auto-populate summary & topic for existing clauses if missing
+    from ai_engine import LegalRuleScanner
+    updated_clauses = False
+    for c in contract.clauses:
+        if not c.topic:
+            c.topic = LegalRuleScanner.classify_topic(c.original_text)
+            updated_clauses = True
+        if not c.summary:
+            c.summary = LegalRuleScanner.summarize_clause(c.original_text, c.topic)
+            updated_clauses = True
+
+    if updated_clauses:
+        db.commit()
+        db.refresh(contract)
+
+    clause_dicts = [
+        {
+            "clause_index": c.clause_index,
+            "topic": c.topic or "General Provisions & Boilerplate",
+            "text": c.original_text,
+            "summary": c.summary,
+        }
+        for c in contract.clauses
+    ]
+
+    total_risks = sum(len(c.risk_flags) for c in contract.clauses)
+    if not contract.executive_summary:
+        contract.executive_summary = ai_engine.generate_executive_summary(clause_dicts, total_risks)
+        db.commit()
+        db.refresh(contract)
+
+    contract.topic_comparisons = ai_engine.generate_topic_comparisons(clause_dicts)
     return contract
 
 
@@ -401,6 +438,61 @@ async def clear_all_contracts_endpoint(
         details=f"Clean slate reset executed by {current_user.email}: deleted {count} contracts.",
     )
     return {"status": "success", "deleted_count": count, "message": "All contracts wiped successfully."}
+
+
+@app.post("/api/contracts/{contract_id}/complete", response_model=ContractResponse, tags=["Contracts"])
+async def mark_contract_completed_endpoint(
+    contract_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Marks a contract as completed, reviewed, and signed.
+    Restricted to ADMIN users only.
+    Generates an immutable audit trail entry.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative privileges required. Only an administrator can execute and mark contracts as completed.",
+        )
+
+    contract = crud.get_contract_by_id(db, contract_id, user=current_user)
+    if not contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Contract not found.",
+        )
+
+    signer_name = current_user.name or current_user.email
+    updated_contract = crud.mark_contract_completed(
+        db,
+        contract_id=contract_id,
+        signed_by=signer_name,
+    )
+
+    crud.create_audit_log(
+        db,
+        action="CONTRACT_COMPLETED_SIGNED",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        target_contract_id=contract_id,
+        details=f"Contract '{contract.file_name}' marked as completed and signed successfully by {signer_name} (Admin).",
+    )
+
+    clause_dicts = [
+        {
+            "clause_index": c.clause_index,
+            "topic": c.topic or "General Provisions & Boilerplate",
+            "text": c.original_text,
+            "summary": c.summary,
+        }
+        for c in updated_contract.clauses
+    ]
+    updated_contract.topic_comparisons = ai_engine.generate_topic_comparisons(clause_dicts)
+
+    return updated_contract
+
 
 
 

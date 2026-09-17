@@ -124,12 +124,15 @@ class Contract(Base):
     s3_url = Column(String(1024), nullable=True)
     status = Column(
         Enum(
-            "uploaded", "processing", "analyzed", "error",
+            "uploaded", "processing", "analyzed", "completed", "error",
             name="contract_status_enum",
         ),
         nullable=False,
         default="uploaded",
     )
+    signed_at = Column(DateTime, nullable=True)
+    signed_by = Column(String(255), nullable=True)
+    executive_summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # ── Relationships ────────────────────────────────────────
@@ -209,6 +212,8 @@ class ExtractedClause(Base):
     )
     clause_index = Column(Integer, nullable=False)
     original_text = Column(Text, nullable=False)
+    summary = Column(Text, nullable=True)
+    topic = Column(String(255), nullable=True)
     # NOTE: The pgvector embedding column will be added when the
     # pgvector extension and embedding pipeline are wired up.
     # Example: embedding = Column(Vector(1536))

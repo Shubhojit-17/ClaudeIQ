@@ -155,14 +155,50 @@ def run_phase4_integration():
         assert "admin@audit.clauseiq" in admin_seen_emails
         print(f"[SUCCESS] Step 5: Compliance audit trail verified ({len(audit_logs)} audit actions recorded across all roles).")
 
+        # Step 5b: Verify Clause Summary, Topic Classification & Topic Comparisons
+        contract_detail_resp = client.get(f"/api/contracts/{contract_id}", headers=admin_headers)
+        assert contract_detail_resp.status_code == 200
+        contract_detail = contract_detail_resp.json()
+        assert "clauses" in contract_detail and len(contract_detail["clauses"]) >= 2
+        for cl in contract_detail["clauses"]:
+            assert cl.get("summary") is not None and len(cl["summary"]) > 0, "Clause missing summary!"
+            assert cl.get("topic") is not None and len(cl["topic"]) > 0, "Clause missing topic!"
+            print(f"  -> Topic: [{cl['topic']}] Summary: {cl['summary'][:60]}...")
+        assert "topic_comparisons" in contract_detail
+        print(f"[SUCCESS] Step 5b: Clause summaries, topics, and topic comparisons verified.")
+
+        # Step 5c: Verify RBAC on Contract Completion & Signing
+        # Non-admin (Reviewer) attempt must fail with 403 Forbidden
+        rev_complete_resp = client.post(
+            f"/api/contracts/{contract_id}/complete",
+            json={"notes": "Attempted reviewer sign"},
+            headers=rev_headers,
+        )
+        assert rev_complete_resp.status_code == 403, f"Expected 403 Forbidden for non-admin, got {rev_complete_resp.status_code}"
+        print("[SUCCESS] Step 5c: Non-admin contract completion blocked with 403 Forbidden.")
+
+        # Admin execution succeeds
+        admin_complete_resp = client.post(
+            f"/api/contracts/{contract_id}/complete",
+            json={"notes": "All legal terms and auto-renewals agreed and countersigned."},
+            headers=admin_headers,
+        )
+        assert admin_complete_resp.status_code == 200
+        comp_data = admin_complete_resp.json()
+        assert comp_data["status"] == "completed"
+        assert comp_data["signed_by"] in ("Admin Auditor", "admin@audit.clauseiq")
+        assert comp_data["signed_at"] is not None
+        print(f"[SUCCESS] Step 5d: Admin completed and signed contract successfully ({comp_data['status']}).")
+
         # Step 6: Cascading deletion & cleanup audit
         del_resp = client.delete(f"/api/contracts/{contract_id}", headers=admin_headers)
         assert del_resp.status_code == 204
 
         post_audit = client.get("/api/audit-logs", headers=admin_headers)
         post_actions = [a["action"] for a in post_audit.json()]
+        assert "CONTRACT_COMPLETED_SIGNED" in post_actions
         assert "CONTRACT_DELETED" in post_actions
-        print("[SUCCESS] Step 6: Contract deletion and CONTRACT_DELETED audit log verified.")
+        print("[SUCCESS] Step 6: Contract completion audit, deletion and CONTRACT_DELETED audit log verified.")
 
         print("[COMPLETE] [Track 2 - Backend & Integration] All Phase 4 End-to-End integration tests passed 100%!")
 

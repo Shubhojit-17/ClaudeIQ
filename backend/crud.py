@@ -133,6 +133,40 @@ def update_contract_status(db: Session, contract_id: uuid.UUID, status: str) -> 
     return contract
 
 
+def mark_contract_completed(
+    db: Session,
+    contract_id: uuid.UUID,
+    signed_by: str,
+    notes: Optional[str] = None,
+) -> Optional[Contract]:
+    """
+    Marks a contract as completed, executed, and signed (admin only).
+    Records timestamp and signing party identity.
+    """
+    contract = db.query(Contract).filter(Contract.contract_id == contract_id).first()
+    if not contract:
+        return None
+    contract.status = "completed"
+    contract.signed_at = datetime.utcnow()
+    contract.signed_by = signed_by
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+def update_contract_executive_summary(
+    db: Session,
+    contract_id: uuid.UUID,
+    executive_summary: str,
+) -> Optional[Contract]:
+    contract = db.query(Contract).filter(Contract.contract_id == contract_id).first()
+    if contract:
+        contract.executive_summary = executive_summary
+        db.commit()
+        db.refresh(contract)
+    return contract
+
+
 def delete_contract(db: Session, contract_id: uuid.UUID) -> bool:
     contract = db.query(Contract).filter(Contract.contract_id == contract_id).first()
     if contract:
@@ -156,19 +190,36 @@ def clear_all_contracts(db: Session) -> int:
 # CLAUSES & GROUNDED RISK FLAGS CRUD
 # ═══════════════════════════════════════════════════════════════
 
-def create_clauses_bulk(db: Session, contract_id: uuid.UUID, clause_texts: List[str]) -> List[ExtractedClause]:
+def create_clauses_bulk(
+    db: Session,
+    contract_id: uuid.UUID,
+    clause_items: List[Any],
+) -> List[ExtractedClause]:
+    """Creates extracted clauses, persisting AI summary and topic classification."""
     clauses = []
-    for idx, text in enumerate(clause_texts, start=1):
+    for idx, item in enumerate(clause_items, start=1):
+        if isinstance(item, dict):
+            text = item.get("text", "")
+            summary = item.get("summary")
+            topic = item.get("topic")
+        else:
+            text = str(item)
+            summary = None
+            topic = None
+
         clause = ExtractedClause(
             clause_id=uuid.uuid4(),
             contract_id=contract_id,
             clause_index=idx,
             original_text=text,
+            summary=summary,
+            topic=topic,
         )
         clauses.append(clause)
     db.add_all(clauses)
     db.commit()
     return clauses
+
 
 
 def create_risk_flag(

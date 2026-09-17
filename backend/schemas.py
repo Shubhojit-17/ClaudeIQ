@@ -6,7 +6,7 @@ Provides type safety across all API routes and data transfer objects.
 """
 
 from datetime import date, datetime
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -131,6 +131,8 @@ class RiskFlagResponse(RiskFlagBase):
 class ExtractedClauseBase(BaseModel):
     clause_index: int = Field(..., ge=0)
     original_text: str
+    summary: Optional[str] = None
+    topic: Optional[str] = None
 
 
 class ExtractedClauseCreate(ExtractedClauseBase):
@@ -173,7 +175,7 @@ class KeyDateResponse(KeyDateBase):
 # ═══════════════════════════════════════════════════════════════
 # CONTRACT SCHEMAS
 # ═══════════════════════════════════════════════════════════════
-ContractStatus = Literal["uploaded", "processing", "analyzed", "error"]
+ContractStatus = Literal["uploaded", "processing", "analyzed", "completed", "error"]
 
 
 class ContractBase(BaseModel):
@@ -190,6 +192,10 @@ class ContractResponse(ContractBase):
     uploaded_by: Optional[UUID] = None
     status: ContractStatus
     created_at: datetime
+    signed_at: Optional[datetime] = None
+    signed_by: Optional[str] = None
+    executive_summary: Optional[str] = None
+    topic_comparisons: Optional[List[Dict[str, Any]]] = None
     clauses: List[ExtractedClauseResponse] = []
     key_dates: List[KeyDateResponse] = []
 
@@ -201,6 +207,8 @@ class ContractSummary(ContractBase):
     uploaded_by: Optional[UUID] = None
     status: ContractStatus
     created_at: datetime
+    signed_at: Optional[datetime] = None
+    signed_by: Optional[str] = None
     clause_count: int = 0
     risk_count: int = 0
     upcoming_dates_count: int = 0
