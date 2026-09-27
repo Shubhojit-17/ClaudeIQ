@@ -1,132 +1,207 @@
 # ClauseIQ — Final Presentation Script
-### **[PES University | Team DarkTrace | ClauseIQ | Final Deck]**
-**Duration**: ~5 to 7 minutes total (~1 to 1.5 minutes per speaker)  
-**Style**: Punchy, confident, professional, and strictly focused on features, architecture, and live workflow.
+### **Deloitte Capstone 2027 · Student Response**
+**Team DarkTrace | PES University | Project: ClauseIQ**  
+**Presentation Time**: ~5 to 7 minutes total (~1 to 1.5 minutes per speaker)  
+**Tone**: Professional, crisp, and 100% aligned with the Deloitte Capstone slide deck.
 
 ---
 
-## 👥 Speaker Division Overview
+## 👥 Speaker Allocation Matrix (16 Slides)
 
-| Speaker | Name | Focus Area | Slides Covered |
+| Speaker | Name | Slides Covered | Key Focus |
 | :--- | :--- | :--- | :--- |
-| **Speaker 1** | **Shubhojit Sarkar** | Title, Problem Statement & The ClauseIQ Solution | Slides 1 – 3 |
-| **Speaker 2** | **Shaik Khadeeja Sayeed** | Architecture, Multi-Cloud AI & Live Ingestion Flow | Slides 4 – 6 |
-| **Speaker 3** | **Shreeya Nagaraj** | Grounded Citations, Plain-English Summaries & Topic Matrix | Slides 7 – 8 |
-| **Speaker 4** | **Sindhu S B** | Compliance Risk Radar, Obligations & Legal Signing Workflow | Slides 9 – 10 |
-| **Speaker 5** | **Yalavarthi Gnana Deepika** | RBAC Audit Trail, Walkthrough Video, ROI & Conclusion | Slides 11 – 16 |
+| **Speaker 1** | **Shubhojit Sarkar** | Slides 1 – 3 | Title Cover, Snapshot & Problem Understanding |
+| **Speaker 2** | **Shaik Khadeeja Sayeed** | Slides 4 – 6 | The Solution, Layered Architecture & End-to-End Pipeline |
+| **Speaker 3** | **Shreeya Nagaraj** | Slides 7 – 9 | Command Center Dashboard, Grounded Clause Explorer & Topic Matrix |
+| **Speaker 4** | **Sindhu S B** | Slides 10 – 12 | Risk Radar & Milestones, Enterprise Signing & Video Walkthrough |
+| **Speaker 5** | **Yalavarthi Gnana Deepika** | Slides 13 – 16 | Security & RBAC, Measurable ROI, Strategic Roadmap & Conclusion |
 
 ---
 
 ## 🎙️ Speaker 1: Shubhojit Sarkar
-**Focus**: *Title, The Real-World Legal Crisis & ClauseIQ Value Proposition (Slides 1 – 3)*  
-**Estimated Time**: ~1 minute
+**Slides Covered**: *Slide 1 (Title Cover) → Slide 2 (Snapshot) → Slide 3 (Problem Understanding)*  
+**Target Duration**: ~1 minute 15 seconds
 
-> **[Slide 1: Title Slide]**  
-> "Good morning mentors and fellow peers. We are team **DarkTrace** from **PES University**, and today we are presenting **ClauseIQ** — an Autonomous Legal Intelligence and Enterprise Compliance Platform."
+---
 
-> **[Slide 2: Problem Statement]**  
-> "Modern enterprises execute thousands of complex agreements every year — Master Services Agreements, NDAs, and Data Processing Agreements.  
-> The core problem is threefold:  
-> 1. Manual contract review takes days and leads to severe human blindspots — like buried auto-renewal traps or uncapped indemnification liabilities.  
-> 2. Most critically, **generic AI tools like standard ChatGPT hallucinate**. In legal agreements, an AI hallucinating or misquoting a clause creates catastrophic liability.  
-> 3. Organizations lack role-based data governance, allowing non-admin personnel unverified access with zero auditability."
+### **Slide 1: Title Slide (Deloitte Capstone 2027 · Cover)**
+> "Respected mentors and evaluators, good day.  
+> We are team **DarkTrace** from **PES University**, and we are proud to present our Deloitte Capstone project: **ClauseIQ** — an Autonomous AI Contract Intelligence and Compliance Assistant.  
+> ClauseIQ is engineered to read complex, multi-page enterprise contracts in minutes, proactively flag high-risk clauses, and track mission-critical dates."
 
-> **[Slide 3: The ClauseIQ Solution]**  
-> "To solve this, we built **ClauseIQ**.  
-> ClauseIQ is designed with **Zero-Hallucination Assurance**: every single extracted clause and risk is tied directly to an exact, character-level verbatim quotation from the original contract.  
-> Furthermore, it automatically translates complex legalese into **plain-English summaries**, performs **cross-clause topic comparison**, and enforces **admin-only legal contract signing** backed by an immutable cryptographic audit ledger.  
-> I will now pass it to **Khadeeja** to walk through our technical architecture."
+---
+
+### **Slide 2: Proposed Use Case · Snapshot ("ClauseIQ in one look")**
+> "To understand ClauseIQ at a single glance:  
+> - **What it is**: An intelligent AI assistant that reads, reviews, and explains enterprise contracts.  
+> - **Who it helps**: Legal teams, procurement officers, finance leaders, and startup founders.  
+> - **What it does**: It flags operational risks, tracks key dates and renewal windows, and summarizes legalese into clear English.  
+> - **Why now**: Advanced LLMs paired with retrieval architectures can finally parse messy, unstructured legal syntax with precision.  
+> *In short, ClauseIQ turns slow, manual contract review into fast, auditable, and defensible AI-assisted workflows.*"
+
+---
+
+### **Slide 3: Problem Understanding ("Contracts pile up faster than people can read them")**
+> "In corporate operations, contracts accumulate rapidly across hundreds of vendors. Organizations face four compounding bottlenecks:  
+> 1. **SLOW**: Reviewing a single master services agreement manually consumes hours of valuable legal bandwidth.  
+> 2. **RISKY**: A single overlooked auto-renewal clause or uncapped indemnity can cost lakhs in liabilities.  
+> 3. **BLIND**: Enterprises lack a unified, cross-contract dashboard to track obligations in real time.  
+> 4. **AI LIABILITY**: Off-the-shelf generative AI tends to paraphrase or fabricate legal facts, creating severe compliance risks.  
+> *The challenge is not merely speed — it is traceability, role-based access control, and defensible decisions.*  
+> I now hand over to **Khadeeja** to explain our solution and technical architecture."
 
 ---
 
 ## 🎙️ Speaker 2: Shaik Khadeeja Sayeed
-**Focus**: *System Architecture, Multi-Provider AI Engine & Document Ingestion (Slides 4 – 6)*  
-**Estimated Time**: ~1 minute
+**Slides Covered**: *Slide 4 (The Solution) → Slide 5 (Architecture) → Slide 6 (End-to-End Pipeline)*  
+**Target Duration**: ~1 minute 20 seconds
 
-> **[Slide 4: Architecture & Tech Stack]**  
+---
+
+### **Slide 4: The ClauseIQ Solution ("From legalese to defensible action")**
 > "Thank you, Shubhojit.  
-> On the technical side, ClauseIQ is built with an enterprise-grade, decoupled stack:  
-> - **Backend**: A high-concurrency **FastAPI** service with asynchronous request pipelines and strict Pydantic v2 schemas.  
-> - **Database Layer**: **SQLAlchemy ORM** featuring custom cross-platform GUID type decorators and database-level Row-Level Security (RLS).  
-> - **AI Engine**: A flexible multi-provider architecture supporting **Groq Cloud (Llama 3.3 70B)** for ultra-fast 500-tokens-per-second parsing, **Google Gemini 2.0 Flash**, **OpenAI GPT-4o**, and a deterministic fallback rule engine.  
-> - **Frontend**: A minimal, futuristic dark dashboard built in **React 18 and Vite**, styled with a custom obsidian cyber-mesh design system."
+> ClauseIQ bridges the gap between dense legalese and defensible enterprise action through five core pillars:  
+> 1. **VERBATIM GROUNDING**: Every extracted clause, risk flag, and obligation is strictly tethered to the exact source text from the document.  
+> 2. **PLAIN-ENGLISH TRANSLATION**: Intricate legal syntax is translated into concise executive summaries beneath each clause.  
+> 3. **TOPIC COMPARISON**: Interlocking clauses across confidentiality, breach notification, and liability are automatically cross-correlated.  
+> 4. **ADMIN-GATED EXECUTION**: Contracts feature an authorized signing workflow backed by cryptographic timestamps and role-based access.  
+> 5. **AUDITABLE BY DESIGN**: All ingestion, exploration, and execution activities generate tamper-evident audit logs."
 
-> **[Slide 5 & 6: Ingestion Pipeline & Dashboard Command Center]**  
-> "When a user uploads a contract — whether PDF, DOCX, or text:  
-> 1. Our ingestion parser extracts and cleans raw tokens while preserving document layout.  
-> 2. The AI boundary chunker identifies and isolates operative contractual clauses.  
-> 3. Key dates and milestone obligations are scheduled, and potential compliance threats are classified.  
-> 4. The **Command Center Dashboard** provides real-time telemetry: active repositories, compliance health indexes, and instant omni-search filtering across ingested agreements.  
-> Now, **Shreeya** will demonstrate our grounded extraction and topic comparison capabilities."
+---
+
+### **Slide 5: System Architecture ("A clean layered technical foundation")**
+> "ClauseIQ is architected from the ground up for confidential, enterprise contracts across four decoupled layers:  
+> - **Interface Layer**: A modern, high-contrast dark dashboard built with **React 18, Vite**, and a bespoke Tailwind cyber design system featuring live telemetry widgets.  
+> - **Intelligence Layer**: A modular RAG pipeline with provider abstraction and a deterministic verbatim rule engine.  
+> - **Processing Layer**: Multi-format ingestion for **PDF, DOCX, and TXT**, incorporating layout-aware tokenization and semantic clause boundary segmentation.  
+> - **Data Layer**: An enterprise **SQLAlchemy ORM** supporting PostgreSQL and SQLite with database-level Row-Level Security.  
+> - **AI Provider Matrix**: Supports ultra-fast inference on **Groq (Llama 3.3 70B)** at ~500 tokens per second, **Google Gemini 2.0 Flash**, and **OpenAI GPT-4o**, backed by local deterministic fallbacks."
+
+---
+
+### **Slide 6: Solution Design and Approach ("How ClauseIQ works end to end")**
+> "Our pipeline executes seamlessly in five continuous stages:  
+> 1. **INGEST**: Clean text and formatting are extracted from uploaded documents.  
+> 2. **INDEX**: The agreement is partitioned into numbered, operative legal clauses.  
+> 3. **ANALYZE**: Clauses are scored for risk exposure, legal entities, and binding covenants.  
+> 4. **TRACK**: Milestone obligations and renewal dates are assigned to designated owners with alert triggers.  
+> 5. **SYNTHESIZE**: The platform compiles an executive contract summary complete with cited source evidence.  
+> *The output is a living contract record — searchable, explainable, and continuously trackable.*  
+> I will now invite **Shreeya** to walk through our core product experience."
 
 ---
 
 ## 🎙️ Speaker 3: Shreeya Nagaraj
-**Focus**: *Grounded Clause Explorer, Plain-English Summaries & Multi-Clause Topic Matrix (Slides 7 – 8)*  
-**Estimated Time**: ~1.2 minutes
+**Slides Covered**: *Slide 7 (Dashboard) → Slide 8 (Clause Explorer) → Slide 9 (Topic Matrix)*  
+**Target Duration**: ~1 minute 20 seconds
 
-> **[Slide 7: Grounded Clause Explorer & Plain-English Summaries]**  
+---
+
+### **Slide 7: Product Experience · Dashboard ("Command Center Dashboard")**
 > "Thank you, Khadeeja.  
-> When a reviewer clicks 'Explore' on any contract, ClauseIQ opens our **Clause Explorer**:  
-> - At the top, the system provides an **AI Contract Executive Synthesis** summarizing commitments and exposure areas.  
-> - For every individual clause, ClauseIQ provides a dedicated **AI Plain-English Summary**. Non-legal business executives can immediately understand what a clause requires without reading pages of legalese.  
-> - And crucially, every clause features an **Exact Verbatim Source Citation Grounding** box. You can see the exact, untouched words from the source agreement — ensuring 100% legal grounding with zero fabrication."
+> When users log into ClauseIQ, they are greeted by our **Live Command Center Dashboard**:  
+> - At the top, high-tech telemetry pods display live operational metrics: **Active Repositories**, total **Risk Flags**, upcoming **Key Dates**, and an overall **Compliance Health Index**.  
+> - The live workspace status confirms real-time analysis completion and audit logging.  
+> - An **Ingested Contracts Matrix** provides instant search and format filtering across PDFs and DOCX files.  
+> - Crucially, our live telemetry guarantees that every insight is backed by *verbatim source grounding* — showing exact contract text rather than an unverified paraphrase."
 
-> **[Slide 8: Multi-Clause Topic Comparison Matrix]**  
-> "In real-world contracts, obligations are often scattered across different sections.  
-> With our **'Compare by Topic' Matrix**, ClauseIQ automatically groups interlocking clauses under common topics like *Confidentiality*, *Data Protection*, or *Termination*.  
-> It performs an **AI Comparative Synthesis** to detect overlaps and resolve conflicting terms side-by-side.  
-> I will now hand over to **Sindhu** to cover our Risk Radar and Legal Signing Workflow."
+---
+
+### **Slide 8: Product Experience · Clause Explorer ("Grounded Clause Explorer")**
+> "Clicking into any contract opens the **Grounded Clause Explorer**:  
+> - At the header, users receive an **AI Executive Synthesis** capturing the overarching commercial intent.  
+> - Beneath each extracted clause, ClauseIQ provides an **AI Plain-English Summary**, enabling procurement managers and non-lawyers to immediately grasp legal rights and liabilities without reading pages of legalese.  
+> - Underneath, a highlighted **Exact Citation Box** displays the verbatim source text. This completely eliminates AI hallucination, providing a verifiable quote that legal counsel can defend in court."
+
+---
+
+### **Slide 9: Product Experience · Topic Matrix ("Multi-Clause Topic Comparison")**
+> "In practice, related obligations are frequently scattered across multiple sections.  
+> In our **Topic Matrix view**, ClauseIQ automatically clusters interlocking clauses under shared legal themes — such as *Confidentiality*, *Data Protection*, or *Termination*.  
+> It performs an **AI Comparative Synthesis** to evaluate consistency, detect conflicting covenants, and present side-by-side clause cards. Reviewers can cross-examine overlapping provisions in seconds.  
+> I now hand over to **Sindhu** to cover risk analysis, execution, and our live demonstration."
 
 ---
 
 ## 🎙️ Speaker 4: Sindhu S B
-**Focus**: *Compliance Risk Radar, Obligations Milestone Tracker & Admin Contract Execution (Slides 9 – 10)*  
-**Estimated Time**: ~1.2 minutes
+**Slides Covered**: *Slide 10 (Risk & Milestones) → Slide 11 (Execution) → Slide 12 (Walkthrough Video)*  
+**Target Duration**: ~1 minute 20 seconds
 
-> **[Slide 9: Risk Radar & Obligations Timeline]**  
+---
+
+### **Slide 10: Product Experience · Risk and Obligations ("Compliance Risk Radar & Milestones")**
 > "Thank you, Shreeya.  
-> In our **Compliance Risk Radar**, contracts are continuously evaluated for operational threats:  
-> - Risks are categorized into **High**, **Medium**, and **Low** severities, targeting traps like missing liability caps, unilateral indemnification, or short termination notice periods.  
-> - Each risk card quotes the exact contractual text that triggered the alert.  
-> - In the **Obligations View**, milestone dates and renewal deadlines are mapped with responsible parties and countdown badges, eliminating late renewal penalties."
+> In the **Compliance Risk Radar**, agreements are monitored for operational and financial exposure:  
+> - Risks are stratified across **High**, **Medium**, and **Low** severity tiers, pinpointing traps like missing liability caps, unilateral indemnification, or harsh termination notice periods.  
+> - Each alert is directly linked to the triggering source clause.  
+> - In tandem, our **Milestones View** extracts critical dates — notice periods, audit windows, and auto-renewals — assigning deadlines and responsible owners to guarantee zero missed commitments."
 
-> **[Slide 10: Legal Contract Execution & Custom Cyber Alert Dialog]**  
-> "Once a contract is fully vetted, it enters the **Execution Phase**:  
-> - Only authorized **Administrators** possess the legal signing authority to mark an agreement as completed and signed.  
-> - Instead of generic browser popups, we designed a custom **Frosted Glass Cyber Confirmation Modal**. It details the target document, signing impact, and administrative credentials.  
-> - Upon signing, ClauseIQ generates an **'Executed & Sealed'** badge with a verifiable UTC completion timestamp and logs the event directly into the security ledger.  
-> If a Reviewer or Viewer attempts to sign, a role-restricted security alert guides them back to authorized workflows.  
-> I will now pass it to **Deepika** to conclude with security, the walkthrough, and business ROI."
+---
+
+### **Slide 11: Product Experience · Execution ("Enterprise Signing & Audit Ledger")**
+> "When an agreement has cleared compliance, it enters the **Execution Phase**:  
+> - Only verified **Administrators** hold the legal signing privilege to execute contracts.  
+> - To preserve workflow integrity, we built a custom **Cyber Confirmation Modal** with an obsidian frosted-glass design, specifying target contract details, signing authority, and cryptographic audit impact.  
+> - Once signed, ClauseIQ generates a verifiable **'Executed & Sealed' certificate** with UTC completion timestamps and logs an immutable entry into the compliance ledger. Unauthorized lower roles receive a security alert."
+
+---
+
+### **Slide 12: Walkthrough Video ("End-to-end live demonstration")**
+> "Here, our live screen walkthrough demonstrates ClauseIQ in action:  
+> - **00:00 to 00:30**: Command Center overview and telemetry monitoring.  
+> - **00:30 to 01:15**: Live drag-and-drop document ingestion and token parsing.  
+> - **01:15 to 02:00**: Exploring grounded clauses and plain-English summaries.  
+> - **02:00 to 02:45**: Cross-clause topic matrix synthesis.  
+> - **02:45 to 03:30**: Role-based access control and persona switching.  
+> - **03:30 to 04:15**: Admin contract execution and ledger verification.  
+> - **04:15 to 04:45**: Pluggable cloud AI provider matrix configuration.  
+> I will now invite **Deepika** to discuss security, business impact, and our roadmap."
 
 ---
 
 ## 🎙️ Speaker 5: Yalavarthi Gnana Deepika
-**Focus**: *Role-Based Security, Cryptographic Audit Trail, Walkthrough Video & Wrap-Up (Slides 11 – 16)*  
-**Estimated Time**: ~1.2 minutes
-
-> **[Slide 11: Security & Cryptographic Audit Trail]**  
-> "Thank you, Sindhu.  
-> Enterprise compliance demands complete accountability.  
-> In ClauseIQ's **Audit Trail**, every single action — ingestion, exploration, risk triage, and signing — is immutably logged with:  
-> - The authenticated user identity and IP scope.  
-> - Monospace UTC timestamps.  
-> - **Hierarchical Role Visibility**: Administrators inspect organization-wide activities, while Reviewers and Viewers are strictly scoped to their assigned contracts via database Row-Level Security."
-
-> **[Slide 12: Live Walkthrough Video]**  
-> "On this slide, our recorded end-to-end product walkthrough demonstrates the complete pipeline in action: from uploading a raw Master Services Agreement, extracting grounded clauses with plain-English summaries, running cross-clause topic synthesis, switching RBAC personas, and executing the agreement as an Administrator."
-
-> **[Slide 13 – 16: Business Impact, Roadmap & Conclusion]**  
-> "To summarize our business impact:  
-> - **90% Cycle Time Reduction**: Turns multi-day contract analysis into under 45 seconds.  
-> - **100% Verbatim Grounding**: Zero risk of AI hallucinations in legal compliance.  
-> - **Guaranteed Audit Readiness**: Complete oversight on renewals and milestone obligations.  
-> Looking forward, our roadmap includes automated AI redlining and native DocuSign integrations.  
-> Thank you for your time. Team **DarkTrace** is now open for any questions or a live interactive walkthrough!"
+**Slides Covered**: *Slide 13 (Security & RBAC) → Slide 14 (ROI) → Slide 15 (Roadmap) → Slide 16 (About ClauseIQ)*  
+**Target Duration**: ~1 minute 20 seconds
 
 ---
 
-## 💡 Quick Tips for the Presentation
-1. **Pacing**: Keep your delivery brisk and confident. Let the screenshots and live UI speak for themselves.
-2. **Key Buzzwords to Emphasize**: *"100% Verbatim Source Grounding"*, *"Zero Hallucination"*, *"Plain-English Summaries"*, *"Multi-Clause Topic Synthesis"*, *"Admin Signing Authority"*, *"Row-Level Security Audit Trail"*.
-3. **Smooth Transitions**: Each speaker cleanly passes the floor to the next speaker by name (e.g. *"I will now pass it to Khadeeja..."*).
+### **Slide 13: Enterprise Security, RBAC and Multi-Tenancy ("Security is a product feature")**
+> "Thank you, Sindhu.  
+> For enterprise legal data, security is not an afterthought — it is a core product feature:  
+> - We implement strict **Role-Based Access Control** with three distinct tiers:  
+>   - **Administrator**: Full organizational governance, contract execution, and global audit oversight.  
+>   - **Legal Reviewer**: Document ingestion, risk triage, and scoped audit inspection.  
+>   - **Business Viewer**: Read-only intelligence, obligation tracking, and individual activity logs.  
+> - Isolation is enforced via **Row-Level Security** directly at the database layer. External inference uses encrypted keys with stateless, zero-retention policies."
+
+---
+
+### **Slide 14: Business Impact and Measurable ROI ("What changes for the enterprise")**
+> "ClauseIQ produces immediate, quantifiable returns for the enterprise:  
+> - **90% ACCELERATION**: Reduces contract turnaround time from several days to under 45 seconds.  
+> - **100% AUDIT COVERAGE**: Full visibility into renewals, notice windows, and milestone commitments.  
+> - **0 BLINDSPOTS**: Automated, deterministic detection of high-risk indemnities and liabilities.  
+> - **24/7 SELF-SERVICE**: Non-legal business stakeholders can independently interpret covenants via plain-English summaries."
+
+---
+
+### **Slide 15: Future Innovations and Strategic Roadmap ("Built to expand beyond first-pass review")**
+> "ClauseIQ is designed for extensible enterprise growth:  
+> - **NOW**: Verbatim grounded analysis, automated risk scoring, and milestone tracking are fully live.  
+> - **NEXT**: We are developing automated AI redlining aligned with company standard playbooks and direct ERP/CRM integrations.  
+> - **LATER**: Our roadmap expands into cross-jurisdiction multi-national law analysis, local edge models, and air-gapped sovereign deployments."
+
+---
+
+### **Slide 16: About ClauseIQ / Conclusion**
+> "In conclusion: **ClauseIQ transforms static, high-risk contracts into living, queryable, and verifiable intelligence assets.**  
+> We are team **DarkTrace** from **PES University** — Shubhojit Sarkar, Shaik Khadeeja Sayeed, Shreeya Nagaraj, Sindhu S B, and Yalavarthi Gnana Deepika.  
+> Our open-source codebase and live platform are accessible on GitHub at `github.com/Shubhojit-17/ClaudeIQ`.  
+> Thank you for your time, and we are now delighted to welcome your questions or conduct a live interactive walkthrough!"
+
+---
+
+## 🎯 Pro Presentation Tips for Team DarkTrace
+1. **Verbal Consistency**: Use the exact terms on the slides (*"Verbatim Grounding"*, *"Plain-English Translation"*, *"Topic Comparison"*, *"Admin-Gated Execution"*, *"Security is a product feature"*).
+2. **Seamless Handoffs**: Each speaker should cleanly introduce the next teammate by name (e.g., *"I will now hand over to Khadeeja..."*).
+3. **Pacing**: Maintain an energetic, confident, 1-minute cadence per speaker so the entire presentation finishes within 6 minutes, leaving ample time for questions.
